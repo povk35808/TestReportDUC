@@ -111,7 +111,6 @@ function ExpenseFilter({ filterType, setFilterType, filterValue, setFilterValue 
 function PaginationControls({ currentPage, totalPages, setCurrentPage }) {
   if (totalPages <= 1) return null; 
 
-  // (UI ថ្មី) Class សម្រាប់ប៊ូតុង Mobile
   const mobileButtonClass = "sm:hidden flex items-center justify-center h-10 w-10 bg-white text-blue-600 rounded-full shadow-md hover:bg-gray-100 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all active:scale-90";
 
   return (
@@ -129,7 +128,7 @@ function PaginationControls({ currentPage, totalPages, setCurrentPage }) {
         ទំព័រមុន
       </button>
 
-      {/* --- (UI ថ្មី) Previous Button (Mobile) --- */}
+      {/* --- Previous Button (Mobile) --- */}
       <button
         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
         disabled={currentPage === 1}
@@ -157,7 +156,7 @@ function PaginationControls({ currentPage, totalPages, setCurrentPage }) {
         </svg>
       </button>
 
-      {/* --- (UI ថ្មី) Next Button (Mobile) --- */}
+      {/* --- Next Button (Mobile) --- */}
       <button
         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
         disabled={currentPage === totalPages}
@@ -174,11 +173,13 @@ function PaginationControls({ currentPage, totalPages, setCurrentPage }) {
 
 // --- Component សម្រាប់ Navigation Bar ---
 function Navbar({ currentPage, setCurrentPage }) {
+  // (*** កែសម្រួលនៅទីនេះ ***)
   const navItems = [
     { id: 'dashboard', label: 'ផ្ទាំងសរុប' }, 
     { id: 'list', label: 'បញ្ជីចំណាយ' }, 
     { id: 'add', label: 'បន្ថែមចំណាយ' },
-    { id: 'templates', label: 'គ្រប់គ្រងឈ្មោះ' }, 
+    { id: 'templates', label: 'គ្រប់គ្រងឈ្មោះ' },
+    { id: 'reports', label: 'របាយការណ៍' }, // <-- ប៊ូតុងថ្មី
   ];
 
   const getButtonClass = (pageId) => {
@@ -208,6 +209,7 @@ function Navbar({ currentPage, setCurrentPage }) {
     
 // --- Component សម្រាប់ Mobile Bottom Navigation Bar ---
 function MobileNavbar({ currentPage, setCurrentPage }) {
+  // (*** កែសម្រួលនៅទីនេះ ***)
   const navItems = [
     { id: 'dashboard', label: 'សរុប', icon: ( 
       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -230,6 +232,12 @@ function MobileNavbar({ currentPage, setCurrentPage }) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     )},
+    // (*** ប៊ូតុងថ្មី ***)
+    { id: 'reports', label: 'របាយការណ៍', icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+    )},
   ];
   
   const getButtonClass = (pageId) => {
@@ -240,8 +248,9 @@ function MobileNavbar({ currentPage, setCurrentPage }) {
     return `${baseClass} text-gray-500 hover:text-blue-600 hover:scale-110`; // Inactive
   };
 
+  // យើងប្តូរ justify-around ទៅ justify-center បើមាន 5 items
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-5px_15px_rgba(0,0,0,0.08)] border-t border-gray-200/50 flex justify-around">
+    <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-5px_15px_rgba(0,0,0,0.08)] border-t border-gray-200/50 flex justify-center">
       {navItems.map(item => (
         <button
           key={item.id}
