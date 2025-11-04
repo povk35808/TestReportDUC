@@ -1,0 +1,16 @@
+/* ត្រូវប្រាកដថា @import នៅខាងលើគេ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Kantumruy+Pro:ital,wght@0,100..700;1,100..700&display=swap');
+
+/* ប្រើ Font ខ្មែរ */
+body {
+  font-family: 'Inter', 'Kantumruy Pro', sans-serif;
+}
+
+/* Animation for page fade-in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
