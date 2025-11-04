@@ -54,7 +54,7 @@ function ExpenseTemplateManager({ expenseTemplates, addExpenseTemplate, deleteEx
 }
 
 
-// --- (*** កែសម្រួល UI នៅទីនេះ ***) Component សម្រាប់ Batch Input Table ---
+// --- Component សម្រាប់ Batch Input Table ---
 function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, expenses }) {
   const defaultDate = new Date().toISOString().split('T')[0];
   
@@ -197,12 +197,11 @@ function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, e
   };
 
   return (
-    // មិនបានកែប្រែផ្នែកខាងក្រៅនេះ
     <div className="mb-8 p-4 sm:p-6 bg-white shadow-lg sm:shadow-md rounded-2xl border border-gray-200/50 transition-all duration-300 ease-in-out sm:hover:shadow-lg">
       <h2 className="text-2xl font-semibold mb-4 text-gray-800">តារាងបញ្ចូលចំណាយថ្មី</h2>
       
       <div className="">
-        {/* --- DESKTOP HEADERS (មិនបានកែប្រែ) --- */}
+        {/* --- DESKTOP HEADERS --- */}
         <div className="hidden sm:table w-full">
           <div className="sm:table-header-group">
             <div className="sm:table-row border-b-2 border-gray-300 bg-gray-100">
@@ -214,15 +213,13 @@ function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, e
           </div>
         </div>
 
-        {/* --- BODY (កែប្រែ UI សម្រាប់ Mobile) --- */}
+        {/* --- BODY --- */}
         <div className="sm:table w-full sm:border-collapse">
           <div className="sm:table-row-group">
             {rows.map(row => (
               <div key={row.id} className="block sm:table-row bg-white sm:bg-transparent shadow-lg sm:shadow-none rounded-2xl sm:rounded-none overflow-hidden mb-4 sm:mb-0 border sm:border-0 border-gray-200/50 sm:border-b">
                 
-                {/* --- (*** UI ថ្មី សម្រាប់ MOBILE ***) --- 
-                បានប្តូរពី bg-gray-100 ទៅជាការរចនាបែប Label + Input Group 
-                */}
+                {/* --- MOBILE UI (Premium) --- */}
                 <div className="block sm:hidden p-4 space-y-5"> 
                     
                     {/* 1. ឈ្មោះចំណាយ (Dropdown) */}
@@ -314,10 +311,10 @@ function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, e
                       </div>
                     </div>
                 </div>
-                {/* --- (*** ចប់ UI ថ្មី សម្រាប់ MOBILE ***) --- */}
+                {/* --- ចប់ MOBILE UI --- */}
 
 
-                {/* --- DESKTOP TABLE VIEW (មិនបានកែប្រែ) --- */}
+                {/* --- DESKTOP TABLE VIEW --- */}
                 <div className="p-2 sm:p-2 hidden sm:table-cell sm:border-b">
                     <select
                       value={row.expenseName}
@@ -375,7 +372,7 @@ function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, e
         </div>
       </div>
       
-      {/* --- ប៊ូតុង (មិនបានកែប្រែ) --- */}
+      {/* --- ប៊ូតុង --- */}
       <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-2">
         <button
           onClick={handleAddRow}
@@ -619,13 +616,14 @@ function EditableExpenseRow({ expense, requestDeleteExpense, updateExpense, expe
   );
 }
     
+// --- (*** UI PREMIUM ថ្មី នៅទីនេះ ***) ---
 // --- Component សម្រាប់កែសម្រួលទិន្នន័យ (Mobile: Card) ---
 function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, expenseTemplates }) { 
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ ...expense });
 
   const handleAmountChange = (value) => {
-    const cleanValue = MySokhaApp.parseAmount(value); 
+    const cleanValue = MySokhaApp.parseAmount(value);
     if (isNaN(cleanValue) && cleanValue !== '') return;
     setEditData(prev => ({ ...prev, amount: cleanValue }));
   };
@@ -645,17 +643,22 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
     setEditData({ ...expense }); 
   };
 
+  // ធ្វើ Format កាលបរិច្ឆេទ
   const formattedDate = new Date(expense.date).toLocaleDateString('km-KH', {
     year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'
   });
   
+  // ធ្វើ Format លុយរៀល
   const amountValue = typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount);
   const formattedAmount = isNaN(amountValue) ? 'N/A' : amountValue.toLocaleString('km-KH');
 
   return (
-    <div className={`relative p-5 bg-white shadow-lg rounded-2xl mb-3 border border-gray-200/50 transition-all duration-300 ease-in-out ${isEditing ? 'border-2 border-blue-500' : ''}`}>
+    // (UI ថ្មី) រចនា Card ខាងក្រៅ
+    <div className={`p-5 bg-white shadow-lg rounded-2xl mb-3 border border-gray-200/50 transition-all duration-300 ease-in-out ${isEditing ? 'border-2 border-blue-500' : ''}`}>
       {isEditing ? (
+        // -- ទម្រង់ Edit (Card) -- (មិនបានកែប្រែ, វាស្អាតហើយ)
         <div className="space-y-3">
+          {/* Edit: ឈ្មោះចំណាយ */}
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">ឈ្មោះចំណាយ</label>
             <select
@@ -667,6 +670,7 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
             </select>
           </div>
           
+          {/* Edit: ចំនួនទឹកប្រាក់ */}
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">ចំនួនទឹកប្រាក់ (៛)</label>
             <input
@@ -678,6 +682,7 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
             />
           </div>
           
+          {/* Edit: កាលបរិច្ឆេទ */}
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">កាលបរិច្ឆេទ</label>
             <input
@@ -688,6 +693,7 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
             />
           </div>
           
+          {/* Edit: ប៊ូតុង */}
           <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={handleCancel}
@@ -704,29 +710,40 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
           </div>
         </div>
       ) : (
-        <div className="pr-16"> 
-          <div className="absolute top-4 right-4 flex flex-col gap-2">
-            <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center justify-center h-9 w-9 bg-gray-200 text-gray-800 rounded-full shadow-sm hover:bg-gray-300 transition-all duration-200 active:scale-90"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => requestDeleteExpense(expense.id)}
-              className="flex items-center justify-center h-9 w-9 bg-red-100 text-red-700 rounded-full shadow-sm hover:bg-red-200 transition-all duration-200 active:scale-90"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
+        // -- (*** UI PREMIUM ថ្មី ***) ទម្រង់បង្ហាញ (Card) --
+        <div>
+          <div className="flex justify-between items-start">
+            {/* ផ្នែកខាងឆ្វេង: ព័ត៌មាន */}
+            <div>
+              <span className="text-xl font-bold text-gray-800">{expense.expenseName}</span>
+              <p className="text-sm text-gray-500 mt-1">{formattedDate}</p>
+            </div>
+            {/* ផ្នែកខាងស្តាំ: ប៊ូតុង */}
+            <div className="flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex items-center justify-center h-9 w-9 bg-gray-200 text-gray-800 rounded-full shadow-sm hover:bg-gray-300 transition-all duration-200 active:scale-90"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => requestDeleteExpense(expense.id)}
+                className="flex items-center justify-center h-9 w-9 bg-red-100 text-red-700 rounded-full shadow-sm hover:bg-red-200 transition-all duration-200 active:scale-90"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
           </div>
-          
-          <span className="text-xl font-bold text-gray-800">{expense.expenseName}</span>
-          <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-rose-700 mt-1">{formattedAmount} ៛</p>
-          <p className="text-sm text-gray-500 mt-2">{formattedDate}</p>
+          {/* ផ្នែកខាងក្រោម: ចំនួនទឹកប្រាក់ */}
+          <div className="mt-4">
+            <p className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-rose-700">
+              {formattedAmount} ៛
+            </p>
+          </div>
         </div>
       )}
     </div>
@@ -776,7 +793,8 @@ function ExpenseList({ expenses, requestDeleteExpense, updateExpense, expenseTem
   const [listPage, setListPage] = useState(1);
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchEndX, setTouchEndX] = useState(0);
-  const ITEMS_PER_PAGE = 10;
+  // (មុខងារទី១) កំណត់ 10 ក្នុងមួយទំព័រ
+  const ITEMS_PER_PAGE = 10; 
   
   const filteredExpenses = useMemo(() => {
     if (loading || !filterValue) return [];
@@ -821,6 +839,7 @@ function ExpenseList({ expenses, requestDeleteExpense, updateExpense, expenseTem
     return sortedExpenses.slice(startIndex, endIndex);
   }, [sortedExpenses, listPage]);
 
+  // (មុខងារទី២) មុខងារអូស (Swipe)
   const handleTouchStart = (e) => {
     setTouchStartX(e.targetTouches[0].clientX);
     setTouchEndX(e.targetTouches[0].clientX); 
@@ -831,14 +850,16 @@ function ExpenseList({ expenses, requestDeleteExpense, updateExpense, expenseTem
   };
   
   const handleTouchEnd = () => {
-    if (touchStartX - touchEndX > 75) { // Swipe Left
+    // អូសទៅឆ្វេង (ទៅទំព័របន្ទាប់)
+    if (touchStartX - touchEndX > 75) { 
       setListPage(prev => {
         const newPage = Math.min(prev + 1, totalPages || 1);
         return newPage;
       });
     }
     
-    if (touchEndX - touchStartX > 75) { // Swipe Right
+    // អូសទៅស្តាំ (ទៅទំព័រមុន)
+    if (touchEndX - touchStartX > 75) { 
       setListPage(prev => {
         const newPage = Math.max(prev - 1, 1);
         return newPage;
@@ -855,6 +876,7 @@ function ExpenseList({ expenses, requestDeleteExpense, updateExpense, expenseTem
         <p className="text-center text-gray-500">មិនមានទិន្នន័យសម្រាប់ជម្រើសនេះទេ។</p>
       ) : (
         <>
+          {/* Desktop View */}
           <div className="hidden sm:block overflow-x-auto">
             <table className="w-full min-w-[600px] table-auto text-left">
               <thead className="border-b-2 border-gray-300 bg-gray-100">
@@ -879,6 +901,7 @@ function ExpenseList({ expenses, requestDeleteExpense, updateExpense, expenseTem
             </table>
           </div>
           
+          {/* Mobile View (Card) */}
           <div 
             className="block sm:hidden"
             onTouchStart={handleTouchStart} 
@@ -896,6 +919,7 @@ function ExpenseList({ expenses, requestDeleteExpense, updateExpense, expenseTem
             ))}
           </div>
           
+          {/* Pagination Controls (បង្ហាញនៅក្រោមបញ្ជី) */}
           <PaginationControls 
             currentPage={listPage}
             totalPages={totalPages}
