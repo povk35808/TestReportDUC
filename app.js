@@ -8,14 +8,14 @@ function App() {
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true); 
   const [submitLoading, setSubmitLoading] = useState(false); 
-  const [currentPage, setCurrentPage] = useState('dashboard'); 
+  const [currentPage, setCurrentPage] = useState('dashboard'); // <-- Default ទៅ 'dashboard'
   
   const [filterType, setFilterType] = useState('daily');
   const [filterValue, setFilterValue] = useState(new Date().toISOString().split('T')[0]); 
   const [isListFilterVisible, setIsListFilterVisible] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
 
-  // (កែប្រែ) ប្រើអថេរពី Global 'MySokhaApp'
+  // ប្រើអថេរពី Global 'MySokhaApp'
   const { auth, rtdb, appId, firebase, initialAuthToken } = MySokhaApp;
 
   // 1. ដំណើរការ Authentication
@@ -46,7 +46,7 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, [auth, initialAuthToken]); // (កែប្រែ) បន្ថែម dependencies
+  }, [auth, initialAuthToken]); 
   
 
   // 2. ភ្ជាប់ទៅ Firebase (Realtime DB)
@@ -110,7 +110,7 @@ function App() {
       templatesRef.off('value', unsubscribeTemplates);
       expensesRef.off('value', unsubscribeExpenses);
     };
-  }, [rtdb, appId]); // (កែប្រែ) បន្ថែម dependencies
+  }, [rtdb, appId]); 
 
   // --- Functions សម្រាប់ CRUD (Create, Read, Update, Delete) ---
 
@@ -119,7 +119,7 @@ function App() {
     
     const expenseData = {
       ...expense,
-      createdAt: firebase.database.ServerValue.TIMESTAMP, // (កែប្រែ) ប្រើ Global
+      createdAt: firebase.database.ServerValue.TIMESTAMP, 
       addedBy: userId || 'anonymous' 
     };
 
@@ -174,7 +174,7 @@ function App() {
       const newTemplateRef = rtdb.ref(collectionPath).push(); 
       await newTemplateRef.set({ 
         name: name.trim(), 
-        createdAt: firebase.database.ServerValue.TIMESTAMP // (កែប្រែ) ប្រើ Global
+        createdAt: firebase.database.ServerValue.TIMESTAMP 
       });
       console.log("Added public template:", name);
     } catch (error)
@@ -294,6 +294,11 @@ function App() {
                   deleteExpenseTemplate={deleteExpenseTemplate}
                 />
               </>
+            )}
+            
+            {/* (*** កូដថ្មីដែលត្រូវបន្ថែមនៅទីនេះ ***) */}
+            {currentPage === 'reports' && (
+              <ReportDownloader expenses={expenses} />
             )}
           
           </div>
