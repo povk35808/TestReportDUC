@@ -1,7 +1,7 @@
-// This file makes the Khmer font available to our app
-if (typeof MySokhaApp === 'undefined') {
-  var MySokhaApp = {};
-}
+// // This file makes the Khmer font available to our app
+// if (typeof MySokhaApp === 'undefined') {
+//   var MySokhaApp = {};
+// }
 
 /* សូមបិទភ្ជាប់ (Paste) កូដ Base64 ដ៏វែង 
   ដែលអ្នកបានចម្លងពីជំហានទី២ មកជំនួសកន្លែងនេះ
