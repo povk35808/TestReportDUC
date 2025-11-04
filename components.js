@@ -616,8 +616,7 @@ function EditableExpenseRow({ expense, requestDeleteExpense, updateExpense, expe
   );
 }
     
-// --- (*** UI PREMIUM ថ្មី នៅទីនេះ ***) ---
-// --- Component សម្រាប់កែសម្រួលទិន្នន័យ (Mobile: Card) ---
+// --- (UI PREMIUM ថ្មី) Component សម្រាប់កែសម្រួលទិន្នន័យ (Mobile: Card) ---
 function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, expenseTemplates }) { 
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ ...expense });
@@ -643,22 +642,18 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
     setEditData({ ...expense }); 
   };
 
-  // ធ្វើ Format កាលបរិច្ឆេទ
   const formattedDate = new Date(expense.date).toLocaleDateString('km-KH', {
     year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'
   });
   
-  // ធ្វើ Format លុយរៀល
   const amountValue = typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount);
   const formattedAmount = isNaN(amountValue) ? 'N/A' : amountValue.toLocaleString('km-KH');
 
   return (
-    // (UI ថ្មី) រចនា Card ខាងក្រៅ
     <div className={`p-5 bg-white shadow-lg rounded-2xl mb-3 border border-gray-200/50 transition-all duration-300 ease-in-out ${isEditing ? 'border-2 border-blue-500' : ''}`}>
       {isEditing ? (
-        // -- ទម្រង់ Edit (Card) -- (មិនបានកែប្រែ, វាស្អាតហើយ)
+        // -- ទម្រង់ Edit (Card) --
         <div className="space-y-3">
-          {/* Edit: ឈ្មោះចំណាយ */}
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">ឈ្មោះចំណាយ</label>
             <select
@@ -670,7 +665,6 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
             </select>
           </div>
           
-          {/* Edit: ចំនួនទឹកប្រាក់ */}
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">ចំនួនទឹកប្រាក់ (៛)</label>
             <input
@@ -682,7 +676,6 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
             />
           </div>
           
-          {/* Edit: កាលបរិច្ឆេទ */}
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">កាលបរិច្ឆេទ</label>
             <input
@@ -693,7 +686,6 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
             />
           </div>
           
-          {/* Edit: ប៊ូតុង */}
           <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={handleCancel}
@@ -710,7 +702,7 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
           </div>
         </div>
       ) : (
-        // -- (*** UI PREMIUM ថ្មី ***) ទម្រង់បង្ហាញ (Card) --
+        // -- (UI PREMIUM ថ្មី) ទម្រង់បង្ហាញ (Card) --
         <div>
           <div className="flex justify-between items-start">
             {/* ផ្នែកខាងឆ្វេង: ព័ត៌មាន */}
@@ -751,12 +743,17 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
 }
     
     
-// --- Component សម្រាប់ Pagination Controls ---
+// --- (*** កែសម្រួល UI នៅទីនេះ ***) Component សម្រាប់ Pagination Controls ---
 function PaginationControls({ currentPage, totalPages, setCurrentPage }) {
   if (totalPages <= 1) return null; 
 
+  // (UI ថ្មី) Class សម្រាប់ប៊ូតុង Mobile
+  const mobileButtonClass = "sm:hidden flex items-center justify-center h-10 w-10 bg-white text-blue-600 rounded-full shadow-md hover:bg-gray-100 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all active:scale-90";
+
   return (
     <div className="mt-6 flex justify-between items-center">
+      
+      {/* --- Previous Button (Desktop) --- */}
       <button
         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
         disabled={currentPage === 1}
@@ -767,11 +764,24 @@ function PaginationControls({ currentPage, totalPages, setCurrentPage }) {
         </svg>
         ទំព័រមុន
       </button>
+
+      {/* --- (UI ថ្មី) Previous Button (Mobile) --- */}
+      <button
+        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+        disabled={currentPage === 1}
+        className={mobileButtonClass}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
       
+      {/* --- Page Indicator (Mobile & Desktop) --- */}
       <span className="text-sm font-semibold text-gray-700">
         ទំព័រ {currentPage} នៃ {totalPages}
       </span>
       
+      {/* --- Next Button (Desktop) --- */}
       <button
         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
         disabled={currentPage === totalPages}
@@ -782,19 +792,32 @@ function PaginationControls({ currentPage, totalPages, setCurrentPage }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
       </button>
+
+      {/* --- (UI ថ្មី) Next Button (Mobile) --- */}
+      <button
+        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+        disabled={currentPage === totalPages}
+        className={mobileButtonClass}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
     </div>
   );
 }
 
 
-// --- Component សម្រាប់បង្ហាញបញ្ជីចំណាយ ---
+// --- (*** កែសម្រួល UI នៅទីនេះ ***) Component សម្រាប់បង្ហាញបញ្ជីចំណាយ ---
 function ExpenseList({ expenses, requestDeleteExpense, updateExpense, expenseTemplates, loading, filterType, filterValue }) { 
   
   const [listPage, setListPage] = useState(1);
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchEndX, setTouchEndX] = useState(0);
-  // (មុខងារទី១) កំណត់ 10 ក្នុងមួយទំព័រ
-  const ITEMS_PER_PAGE = 10; 
+  
+  // (កែប្រែ) 8 ក្នុងមួយទំព័រ
+  const ITEMS_PER_PAGE = 8; 
   
   const filteredExpenses = useMemo(() => {
     if (loading || !filterValue) return [];
@@ -839,7 +862,7 @@ function ExpenseList({ expenses, requestDeleteExpense, updateExpense, expenseTem
     return sortedExpenses.slice(startIndex, endIndex);
   }, [sortedExpenses, listPage]);
 
-  // (មុខងារទី២) មុខងារអូស (Swipe)
+  // (មុខងារអូស)
   const handleTouchStart = (e) => {
     setTouchStartX(e.targetTouches[0].clientX);
     setTouchEndX(e.targetTouches[0].clientX); 
