@@ -1,5 +1,6 @@
-// បង្កើត Namespace ធំមួយ
-const MySokhaApp = {};
+// (*** កែសម្រួលនៅទីនេះ ***)
+// ត្រូវប្រាកដថាវាជា Global Variable
+var MySokhaApp = {}; 
 
 // --- Global Helper Functions ---
 MySokhaApp.formatDisplayAmount = (amount) => {
