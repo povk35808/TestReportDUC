@@ -54,7 +54,7 @@ function ExpenseTemplateManager({ expenseTemplates, addExpenseTemplate, deleteEx
 }
 
 
-// --- Component សម្រាប់បង្ហាញតារាង "បញ្ចូល" ទិន្នន័យ (Batch Input Table) ---
+// --- (*** កែសម្រួល UI នៅទីនេះ ***) Component សម្រាប់ Batch Input Table ---
 function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, expenses }) {
   const defaultDate = new Date().toISOString().split('T')[0];
   
@@ -79,7 +79,6 @@ function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, e
     date: defaultDate,
   });
 
-  // (កែប្រែ) ប្រើ appId ពី Global config
   const DRAFT_KEY = `expense_drafts_${MySokhaApp.appId}`;
 
   const [rows, setRows] = useState(() => {
@@ -127,7 +126,6 @@ function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, e
   };
   
   const handleAmountChange = (id, value) => {
-    // (កែប្រែ) ប្រើ Global Helper
     const cleanValue = MySokhaApp.parseAmount(value); 
     
     if (isNaN(cleanValue) && cleanValue !== '') {
@@ -199,10 +197,12 @@ function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, e
   };
 
   return (
+    // មិនបានកែប្រែផ្នែកខាងក្រៅនេះ
     <div className="mb-8 p-4 sm:p-6 bg-white shadow-lg sm:shadow-md rounded-2xl border border-gray-200/50 transition-all duration-300 ease-in-out sm:hover:shadow-lg">
       <h2 className="text-2xl font-semibold mb-4 text-gray-800">តារាងបញ្ចូលចំណាយថ្មី</h2>
       
       <div className="">
+        {/* --- DESKTOP HEADERS (មិនបានកែប្រែ) --- */}
         <div className="hidden sm:table w-full">
           <div className="sm:table-header-group">
             <div className="sm:table-row border-b-2 border-gray-300 bg-gray-100">
@@ -214,66 +214,110 @@ function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, e
           </div>
         </div>
 
+        {/* --- BODY (កែប្រែ UI សម្រាប់ Mobile) --- */}
         <div className="sm:table w-full sm:border-collapse">
           <div className="sm:table-row-group">
             {rows.map(row => (
               <div key={row.id} className="block sm:table-row bg-white sm:bg-transparent shadow-lg sm:shadow-none rounded-2xl sm:rounded-none overflow-hidden mb-4 sm:mb-0 border sm:border-0 border-gray-200/50 sm:border-b">
                 
-                <div className="block sm:hidden p-4 space-y-3">
-                    <div className="flex items-center bg-gray-100 rounded-lg p-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
-                        </svg>
+                {/* --- (*** UI ថ្មី សម្រាប់ MOBILE ***) --- 
+                បានប្តូរពី bg-gray-100 ទៅជាការរចនាបែប Label + Input Group 
+                */}
+                <div className="block sm:hidden p-4 space-y-5"> 
+                    
+                    {/* 1. ឈ្មោះចំណាយ (Dropdown) */}
+                    <div>
+                      <label 
+                        htmlFor={`name-${row.id}`} 
+                        className="block text-sm font-semibold text-gray-600 mb-1.5"
+                      >
+                        ឈ្មោះចំណាយ
+                      </label>
+                      <div className="flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm ring-1 ring-black ring-opacity-5">
+                        <div className="pl-4 pr-3 text-gray-400">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                          </svg>
+                        </div>
                         <select
+                          id={`name-${row.id}`}
                           value={row.expenseName}
                           onChange={(e) => handleUpdateRow(row.id, 'expenseName', e.target.value)}
-                          className="w-full bg-transparent border-0 focus:ring-0 text-gray-800 font-semibold p-0"
+                          className="w-full bg-white border-0 focus:ring-0 text-gray-800 font-semibold p-3.5"
                         >
-                        {expenseTemplates.length === 0 && <option value="" disabled>សូមបន្ថែមឈ្មោះចំណាយ...</option>}
-                        {expenseTemplates.map((template) => {
-                          const isRecorded = row.date === defaultDate && recordedToday.has(template.name);
-                          return (
-                            <option 
-                              key={template.id} 
-                              value={template.name}
-                              disabled={isRecorded}
-                              className={isRecorded ? 'text-gray-400' : ''}
-                            >
-                              {template.name} {isRecorded ? '(កត់ត្រារួចហើយ)' : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
+                          {expenseTemplates.length === 0 && <option value="" disabled>សូមបន្ថែមឈ្មោះចំណាយ...</option>}
+                          {expenseTemplates.map((template) => {
+                            const isRecorded = row.date === defaultDate && recordedToday.has(template.name);
+                            return (
+                              <option 
+                                key={template.id} 
+                                value={template.name}
+                                disabled={isRecorded}
+                                className={isRecorded ? 'text-gray-400' : ''}
+                              >
+                                {template.name} {isRecorded ? '(កត់ត្រារួចហើយ)' : ''}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
                     </div>
                     
-                    <div className="flex items-center bg-gray-100 rounded-lg p-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
+                    {/* 2. ចំនួនទឹកប្រាក់ */}
+                    <div>
+                      <label 
+                        htmlFor={`amount-${row.id}`}
+                        className="block text-sm font-semibold text-gray-600 mb-1.5"
+                      >
+                        ចំនួនទឹកប្រាក់
+                      </label>
+                      <div className="flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm ring-1 ring-black ring-opacity-5">
+                        <div className="pl-4 pr-3 text-gray-400">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        </div>
                         <input
+                          id={`amount-${row.id}`}
                           type="tel" 
                           inputMode="decimal"
-                          value={MySokhaApp.formatDisplayAmount(row.amount)}  // (កែប្រែ) ប្រើ Global Helper
+                          value={MySokhaApp.formatDisplayAmount(row.amount)} 
                           onChange={(e) => handleAmountChange(row.id, e.target.value)} 
                           placeholder="0"
-                          className="w-full bg-transparent border-0 focus:ring-0 text-gray-800 font-semibold p-0"
+                          className="w-full bg-white border-0 focus:ring-0 text-gray-800 font-semibold p-3.5"
                         />
-                        <span className="font-semibold text-gray-500">៛</span>
+                        <span className="pr-4 font-semibold text-gray-500">៛</span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center bg-gray-100 rounded-lg p-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
+                    {/* 3. កាលបរិច្ឆេទ */}
+                    <div>
+                      <label 
+                        htmlFor={`date-${row.id}`}
+                        className="block text-sm font-semibold text-gray-600 mb-1.5"
+                      >
+                        កាលបរិច្ឆេទ
+                      </label>
+                      <div className="flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm ring-1 ring-black ring-opacity-5">
+                         <div className="pl-4 pr-3 text-gray-400">
+                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                           </svg>
+                         </div>
                         <input
+                          id={`date-${row.id}`}
                           type="date"
                           value={row.date}
                           onChange={(e) => handleUpdateRow(row.id, 'date', e.target.value)}
-                          className="w-full bg-transparent border-0 focus:ring-0 text-gray-800 font-semibold p-0"
+                          className="w-full bg-white border-0 focus:ring-0 text-gray-800 font-semibold p-3.5"
                         />
+                      </div>
                     </div>
                 </div>
+                {/* --- (*** ចប់ UI ថ្មី សម្រាប់ MOBILE ***) --- */}
 
+
+                {/* --- DESKTOP TABLE VIEW (មិនបានកែប្រែ) --- */}
                 <div className="p-2 sm:p-2 hidden sm:table-cell sm:border-b">
                     <select
                       value={row.expenseName}
@@ -301,7 +345,7 @@ function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, e
                     <input
                       type="tel" 
                       inputMode="decimal"
-                      value={MySokhaApp.formatDisplayAmount(row.amount)} // (កែប្រែ) ប្រើ Global Helper
+                      value={MySokhaApp.formatDisplayAmount(row.amount)} 
                       onChange={(e) => handleAmountChange(row.id, e.target.value)} 
                       placeholder="0"
                       className="w-full mt-1 sm:mt-0 p-2 border border-gray-300 rounded-lg shadow-sm"
@@ -331,6 +375,7 @@ function BatchExpenseForm({ addExpense, expenseTemplates, loading, setLoading, e
         </div>
       </div>
       
+      {/* --- ប៊ូតុង (មិនបានកែប្រែ) --- */}
       <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-2">
         <button
           onClick={handleAddRow}
@@ -473,7 +518,7 @@ function EditableExpenseRow({ expense, requestDeleteExpense, updateExpense, expe
   const [editData, setEditData] = useState({ ...expense });
 
   const handleAmountChange = (value) => {
-    const cleanValue = MySokhaApp.parseAmount(value); // (កែប្រែ) ប្រើ Global Helper
+    const cleanValue = MySokhaApp.parseAmount(value); 
     if (isNaN(cleanValue) && cleanValue !== '') return;
     setEditData(prev => ({ ...prev, amount: cleanValue }));
   };
@@ -524,7 +569,7 @@ function EditableExpenseRow({ expense, requestDeleteExpense, updateExpense, expe
           <input
             type="tel"
             inputMode="decimal"
-            value={MySokhaApp.formatDisplayAmount(editData.amount)} // (កែប្រែ) ប្រើ Global Helper
+            value={MySokhaApp.formatDisplayAmount(editData.amount)} 
             onChange={(e) => handleAmountChange(e.target.value)}
             className="w-full p-2 border border-gray-300 rounded-lg shadow-sm"
           />
@@ -580,7 +625,7 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
   const [editData, setEditData] = useState({ ...expense });
 
   const handleAmountChange = (value) => {
-    const cleanValue = MySokhaApp.parseAmount(value); // (កែប្រែ) ប្រើ Global Helper
+    const cleanValue = MySokhaApp.parseAmount(value); 
     if (isNaN(cleanValue) && cleanValue !== '') return;
     setEditData(prev => ({ ...prev, amount: cleanValue }));
   };
@@ -627,7 +672,7 @@ function EditableExpenseCard({ expense, requestDeleteExpense, updateExpense, exp
             <input
               type="tel"
               inputMode="decimal"
-              value={MySokhaApp.formatDisplayAmount(editData.amount)} // (កែប្រែ) ប្រើ Global Helper
+              value={MySokhaApp.formatDisplayAmount(editData.amount)} 
               onChange={(e) => handleAmountChange(e.target.value)}
               className="w-full mt-1 p-2 border border-gray-300 rounded-lg shadow-sm"
             />
