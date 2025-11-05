@@ -174,14 +174,13 @@ function ReportDownloader({ expenses }) {
         return;
       }
       
-      // (*** កែសម្រួលទី១ - "The Font Trick" ***)
-      // យើង Register Font តែមួយ សម្រាប់ cả 'normal' និង 'bold'
+      // (*** កែសម្រួលទី១ ***)
+      // យើង Register Font តែមួយ សម្រាប់ 'normal'
       doc.addFileToVFS('KantumruyPro-Regular.ttf', MySokhaApp.khmerFontBase64);
       doc.addFont('KantumruyPro-Regular.ttf', 'KantumruyPro', 'normal');
-      doc.addFont('KantumruyPro-Regular.ttf', 'KantumruyPro', 'bold'); // <-- បន្ថែមបន្ទាត់នេះ
-
+      
       // (*** កែសម្រួលទី២ ***)
-      // កំណត់ Font ធម្មតា សម្រាប់ចំណងជើង
+      // ប្រាប់ jsPDF ឱ្យប្រើ Font ធម្មតា (Normal) សម្រាប់ឯកសារទាំងមូល
       doc.setFont('KantumruyPro', 'normal'); 
       doc.setFontSize(18);
       doc.text(reportTitle, 105, 20, { align: 'center' }); 
@@ -215,22 +214,23 @@ function ReportDownloader({ expenses }) {
         body: tableBody,
         theme: 'grid', 
         styles: {
-          font: 'KantumruyPro', // Font នេះនឹងអនុវត្តគ្រប់កន្លែង
-          fontStyle: 'normal',  // តួអក្សរធម្មតា
+          font: 'KantumruyPro',
+          // (*** កែសម្រួលទី៣ ***)
+          fontStyle: 'normal', // ប្រើ Font ធម្មតា សម្រាប់តួតារាង (នេះជាមូលហេតុដែលតួអក្សរចេញ)
           halign: 'left'
         },
         headStyles: {
           fillColor: [22, 160, 133], 
           textColor: 255,
-          // (*** កែសម្រួលទី៣ ***)
-          fontStyle: 'bold', // ឥឡូវយើងអាចប្រើ 'bold' វិញបាន
+          // (*** កែសម្រួលទី៤ ***)
+          fontStyle: 'normal', // ប្តូរពី 'bold' ទៅ 'normal'
         },
         foot: [totalRow],
         footStyles: {
           fillColor: [241, 196, 15], 
           textColor: 0,
-          // (*** កែសម្រួលទី៤ ***)
-          fontStyle: 'bold', // ឥឡូវយើងអាចប្រើ 'bold' វិញបាន
+          // (*** កែសម្រួលទី៥ ***)
+          fontStyle: 'normal', // ប្តូរពី 'bold' ទៅ 'normal'
         },
         columnStyles: {
           0: { halign: 'center', cellWidth: 10 }, 
