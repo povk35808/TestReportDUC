@@ -165,25 +165,25 @@ function ReportDownloader({ expenses }) {
         return;
       }
       
-      // Get libraries from CDN
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       
-      // --- !!! ជំហានសំខាន់: បញ្ចូល Font ខ្មែរ !!! ---
       if (!MySokhaApp.khmerFontBase64) {
-        alert("Error: មិនអាចទាញយក Font ខ្មែរសម្រាប់ PDF បានទេ។");
+        alert("Error: មិនអាចទាញយក Font ខ្មែរសម្រាប់ PDF បានទេ");
         setLoading(false);
         return;
       }
       
-      // Register the font
       doc.addFileToVFS('KantumruyPro-Regular.ttf', MySokhaApp.khmerFontBase64);
       doc.addFont('KantumruyPro-Regular.ttf', 'KantumruyPro', 'normal');
-      doc.setFont('KantumruyPro'); // ប្រើ Font ខ្មែរនេះសម្រាប់ឯកសារទាំងមូល
+      
+      // (*** កែសម្រួលនៅទីនេះ ១ ***)
+      // ប្រាប់ jsPDF ឱ្យប្រើ Font ធម្មតា (Normal)
+      doc.setFont('KantumruyPro', 'normal'); 
 
       // --- Title ---
       doc.setFontSize(18);
-      doc.text(reportTitle, 105, 20, { align: 'center' }); // Center align title
+      doc.text(reportTitle, 105, 20, { align: 'center' }); 
 
       // --- Data for Table ---
       let totalAmount = 0;
@@ -194,14 +194,14 @@ function ReportDownloader({ expenses }) {
           index + 1,
           ex.date,
           ex.expenseName,
-          amount.toLocaleString('en-US') + ' ៛' // Format amount
+          amount.toLocaleString('en-US') + ' ៛'
         ];
       });
 
       // --- Add Total Row ---
       const totalRow = [
-        "", // Empty cell for #
-        "", // Empty cell for Date
+        "", 
+        "", 
         "សរុបទាំងអស់ (Total)",
         totalAmount.toLocaleString('en-US') + ' ៛'
       ];
@@ -209,29 +209,33 @@ function ReportDownloader({ expenses }) {
 
       // --- Create Table using AutoTable ---
       doc.autoTable({
-        startY: 30, // Start table after title
+        startY: 30, 
         head: [['ល.រ', 'កាលបរិច្ឆេទ', 'ឈ្មោះចំណាយ', 'ចំនួនទឹកប្រាក់']],
         body: tableBody,
-        theme: 'grid', // 'striped', 'grid', 'plain'
+        theme: 'grid', 
         styles: {
-          font: 'KantumruyPro', // ប្រើ Font ខ្មែរសម្រាប់តារាង
+          font: 'KantumruyPro',
+          // (*** កែសម្រួលនៅទីនេះ ២ ***)
+          fontStyle: 'normal', // ប្រើ Font ធម្មតា សម្រាប់តួតារាង
           halign: 'left'
         },
         headStyles: {
-          fillColor: [22, 160, 133], // Dark green
+          fillColor: [22, 160, 133], 
           textColor: 255,
-          fontStyle: 'bold',
+          // (*** កែសម្រួលនៅទីនេះ ៣ ***)
+          fontStyle: 'normal', // ប្តូរពី 'bold' ទៅ 'normal'
         },
-        foot: [totalRow], // Add total row to footer (optional, but good)
+        foot: [totalRow],
         footStyles: {
-          fillColor: [241, 196, 15], // Yellow
+          fillColor: [241, 196, 15], 
           textColor: 0,
-          fontStyle: 'bold',
+          // (*** កែសម្រួលនៅទីនេះ ៤ ***)
+          fontStyle: 'normal', // ប្តូរពី 'bold' ទៅ 'normal'
         },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 10 }, // ល.រ
-          2: { cellWidth: 80 }, // ឈ្មោះចំណាយ
-          3: { halign: 'right', cellWidth: 40 } // ចំនួនទឹកប្រាក់
+          0: { halign: 'center', cellWidth: 10 }, 
+          2: { cellWidth: 80 }, 
+          3: { halign: 'right', cellWidth: 40 }
         }
       });
       
