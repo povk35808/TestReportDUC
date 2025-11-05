@@ -174,14 +174,15 @@ function ReportDownloader({ expenses }) {
         return;
       }
       
+      // (*** កែសម្រួលទី១ - "The Font Trick" ***)
+      // យើង Register Font តែមួយ សម្រាប់ cả 'normal' និង 'bold'
       doc.addFileToVFS('KantumruyPro-Regular.ttf', MySokhaApp.khmerFontBase64);
       doc.addFont('KantumruyPro-Regular.ttf', 'KantumruyPro', 'normal');
-      
-      // (*** កែសម្រួលនៅទីនេះ ១ ***)
-      // ប្រាប់ jsPDF ឱ្យប្រើ Font ធម្មតា (Normal)
-      doc.setFont('KantumruyPro', 'normal'); 
+      doc.addFont('KantumruyPro-Regular.ttf', 'KantumruyPro', 'bold'); // <-- បន្ថែមបន្ទាត់នេះ
 
-      // --- Title ---
+      // (*** កែសម្រួលទី២ ***)
+      // កំណត់ Font ធម្មតា សម្រាប់ចំណងជើង
+      doc.setFont('KantumruyPro', 'normal'); 
       doc.setFontSize(18);
       doc.text(reportTitle, 105, 20, { align: 'center' }); 
 
@@ -214,23 +215,22 @@ function ReportDownloader({ expenses }) {
         body: tableBody,
         theme: 'grid', 
         styles: {
-          font: 'KantumruyPro',
-          // (*** កែសម្រួលនៅទីនេះ ២ ***)
-          fontStyle: 'normal', // ប្រើ Font ធម្មតា សម្រាប់តួតារាង (នេះជាមូលហេតុដែលតួអក្សរចេញ)
+          font: 'KantumruyPro', // Font នេះនឹងអនុវត្តគ្រប់កន្លែង
+          fontStyle: 'normal',  // តួអក្សរធម្មតា
           halign: 'left'
         },
         headStyles: {
           fillColor: [22, 160, 133], 
           textColor: 255,
-          // (*** កែសម្រួលនៅទីនេះ ៣ ***)
-          fontStyle: 'normal', // ប្តូរពី 'bold' ទៅ 'normal'
+          // (*** កែសម្រួលទី៣ ***)
+          fontStyle: 'bold', // ឥឡូវយើងអាចប្រើ 'bold' វិញបាន
         },
         foot: [totalRow],
         footStyles: {
           fillColor: [241, 196, 15], 
           textColor: 0,
-          // (*** កែសម្រួលនៅទីនេះ ៤ ***)
-          fontStyle: 'normal', // ប្តូរពី 'bold' ទៅ 'normal'
+          // (*** កែសម្រួលទី៤ ***)
+          fontStyle: 'bold', // ឥឡូវយើងអាចប្រើ 'bold' វិញបាន
         },
         columnStyles: {
           0: { halign: 'center', cellWidth: 10 }, 
@@ -323,7 +323,7 @@ function ReportDownloader({ expenses }) {
             {loading ? 'កំពុងដំណើរការ...' : (
               <>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3D 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 ទាញយក Excel
               </>
