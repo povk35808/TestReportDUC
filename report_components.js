@@ -152,36 +152,12 @@ function ReportDownloader({ expenses }) {
     setLoading(false);
   };
 
-  // (*** វិធីសាស្រ្តថ្មី ចាប់ផ្តើមនៅទីនេះ ***)
-  // --- 3b. Generate PDF (Async/Fetch Method) ---
-
-  // Helper function ដើម្បីបំប្លែង ArrayBuffer ទៅ Base64
-  const arrayBufferToBase64 = (buffer) => {
-    let binary = '';
-    const bytes = new Uint8Array(buffer);
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return window.btoa(binary);
-  };
-
-  const generatePdf = async () => { // 1. ធ្វើឱ្យ Function ទៅជា async
+  // --- 3b. Generate PDF (ប្រើ Base64 ពី khmer_font_base64.js) ---
+  const generatePdf = () => {
     setLoading(true);
-    console.log("Starting PDF generation (Fetch Method)...");
+    console.log("Starting PDF generation (Base64 Method)...");
 
     try {
-      // 2. ទាញយក (Fetch) ហ្វាល់ Font ពី Server
-      console.log("Fetching font file: KantumruyPro-Regular.ttf");
-      const fontResponse = await fetch('KantumruyPro-Regular.ttf');
-      if (!fontResponse.ok) {
-        throw new Error('Network response was not ok');
-      }
-      const fontBuffer = await fontResponse.arrayBuffer();
-      const fontBase64 = arrayBufferToBase64(fontBuffer);
-      console.log("Font fetched and converted to Base64.");
-
-      // 3. ត្រងទិន្នន័យ (ដូចមុន)
       const data = getFilteredData();
       if (data.length === 0) {
         alert("មិនមានទិន្នន័យសម្រាប់ទាញយកပါ။");
@@ -192,15 +168,22 @@ function ReportDownloader({ expenses }) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       
-      // 4. ប្រើ Base64 ដែលទើបតែ Fetch បាន (មិនមែន MySokhaApp ទៀតទេ)
-      doc.addFileToVFS('KantumruyPro-Regular.ttf', fontBase64);
+      // ពិនិត្យមើល MySokhaApp.khmerFontBase64
+      if (!MySokhaApp.khmerFontBase64 || MySokhaApp.khmerFontBase64.trim() === "") {
+        alert("Error: មិនអាចទាញយក Font ខ្មែរ (Base64) បានទេ។\n\nសូម Hard Refresh (Ctrl+Shift+R)។");
+        setLoading(false);
+        return;
+      }
+      
+      // Register Font 'normal'
+      doc.addFileToVFS('KantumruyPro-Regular.ttf', MySokhaApp.khmerFontBase64);
       doc.addFont('KantumruyPro-Regular.ttf', 'KantumruyPro', 'normal');
       
       doc.setFont('KantumruyPro', 'normal'); 
       doc.setFontSize(18);
       doc.text(reportTitle, 105, 20, { align: 'center' }); 
 
-      // --- Data for Table (ដូចមុន) ---
+      // --- Data for Table ---
       let totalAmount = 0;
       const tableBody = data.map((ex, index) => {
         const amount = parseFloat(ex.amount) || 0;
@@ -213,7 +196,7 @@ function ReportDownloader({ expenses }) {
         ];
       });
 
-      // --- Add Total Row (ដូចមុន) ---
+      // --- Add Total Row ---
       const totalRow = [
         "", 
         "", 
@@ -222,7 +205,7 @@ function ReportDownloader({ expenses }) {
       ];
       tableBody.push(totalRow);
 
-      // --- Create Table (ដូចមុន) ---
+      // --- Create Table using AutoTable ---
       doc.autoTable({
         startY: 30, 
         head: [['ល.រ', 'កាលបរិច្ឆេទ', 'ឈ្មោះចំណាយ', 'ចំនួនទឹកប្រាក់']],
@@ -230,138 +213,133 @@ function ReportDownloader({ expenses }) {
         theme: 'grid', 
         styles: {
           font: 'KantumruyPro',
-          fontStyle: 'normal',
+          fontStyle: 'normal', 
           halign: 'left'
         },
         headStyles: {
           fillColor: [22, 160, 133], 
           textColor: 255,
-          fontStyle: 'normal',
+          fontStyle: 'normal', 
         },
-        foot: [totalRow],
+        foot: [totalRow], 
         footStyles: {
           fillColor: [241, 196, 15], 
           textColor: 0,
           fontStyle: 'normal',
         },
-  	  columnStyles: {
+        columnStyles: {
           0: { halign: 'center', cellWidth: 10 }, 
           2: { cellWidth: 80 }, 
           3: { halign: 'right', cellWidth: 40 }
         }
-      });
-      
-      // --- Download File (ដូចមុន) ---
-      const fileName = `Expense_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-      doc.save(fileName);
+  	  });
+  	  
+  	  // --- Download File ---
+  	  const fileName = `Expense_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+  	  doc.save(fileName);
 
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      if (error.message.includes('Network response')) {
-        alert("មានបញ្ហា: មិនអាចទាញយកไฟล์ Font (KantumruyPro-Regular.ttf) បានទេ។\n\nសូមប្រាកដថាអ្នកបានដាក់ไฟล์ .ttf នៅក្នុង Folder ជាមួយ index.html។");
-      } else {
-        alert("មានបញ្ហាក្នុងការបង្កើត PDF file។");
-      }
-    }
+    } catch (error) {
+  	  console.error("Error generating PDF:", error);
+  	  alert("មានបញ្ហាក្នុងការបង្កើត PDF file។");
+    }
 
-    setLoading(false);
+  	setLoading(false);
   };
-  // (*** វិធីសាស្រ្តថ្មី បញ្ចប់នៅទីនេះ ***)
-  
+  
   // --- 4. Render UI ---
   const renderOptions = () => {
-    switch(reportType) {
-      case 'select_month':
-        return (
-          <input
-  	  type="month"
-  	  value={month}
-  	  onChange={(e) => setMonth(e.target.value)}
-  	  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm"
-  	/>
-        );
-      case 'date_range':
-        return (
-          <div className="flex flex-col sm:flex-row gap-2">
-  	  <input
-  	    type="date"
-  	    value={startDate}
-  	    onChange={(e) => setStartDate(e.target.value)}
-  	    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm"
-  	  />
-  	  <span className="text-center p-2 text-gray-500">ដល់</span>
-  	  <input
-  	    type="date"
-  	    value={endDate}
-  	    onChange={(e) => setEndDate(e.target.value)}
-  	    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm"
-  	  />
-  	</div>
-        );
-      case 'current_month':
-      default:
-        return <p className="text-gray-600">នឹងទាញយកទិន្នន័យសម្រាប់ខែនេះ។</p>;
-    }
+  	switch(reportType) {
+  	  case 'select_month':
+  	    return (
+  	      <input
+  		type="month"
+  		value={month}
+  		onChange={(e) => setMonth(e.target.value)}
+  		className="w-full p-3 border border-gray-300 rounded-lg shadow-sm"
+  	      />
+  	    );
+  	  case 'date_range':
+  	    return (
+  	      <div className="flex flex-col sm:flex-row gap-2">
+  		<input
+  		  type="date"
+  		  value={startDate}
+  		  onChange={(e) => setStartDate(e.target.value)}
+  		  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm"
+  		/>
+  		<span className="text-center p-2 text-gray-500">ដល់</span>
+  		<input
+  		  type="date"
+  		  value={endDate}
+  		  onChange={(e) => setEndDate(e.target.value)}
+  		  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm"
+  		/>
+  	      </div>
+  	    );
+  	  case 'current_month':
+  	  default:
+  	    return <p className="text-gray-600">នឹងទាញយកទិន្នន័យសម្រាប់ខែនេះ។</p>;
+  	}
   };
 
   return (
-    <div className="mb-8 p-6 bg-white shadow-lg sm:shadow-md rounded-2xl border border-gray-200/50 transition-all duration-300 ease-in-out sm:hover:shadow-lg">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800">ទាញយករបាយការណ៍</h2>
-      
-      <div className="space-y-4">
-        {/* ជម្រើសប្រភេទ Report */}
-  	<div>
-  	  <label className="block text-sm font-semibold text-gray-700 mb-1">
-  	    ជ្រើសរើសប្រភេទរបាយការណ៍
-  	  </label>
-  	  <select 
-  	    value={reportType} 
-  	    onChange={handleTypeChange}
-  	    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm bg-white"
-  	  >
-  	    <option value="current_month">ទាញយកខែបច្ចុប្បន្ន</option>
-  	    <option value="select_month">ជ្រើសរើសខែឆ្នាំ</option>
-  	    <option value="date_range">ជ្រើសរើសចន្លោះថ្ងៃ</option>
-  	  </select>
+  	<div className="mb-8 p-6 bg-white shadow-lg sm:shadow-md rounded-2xl border border-gray-200/50 transition-all duration-300 ease-in-out sm:hover:shadow-lg">
+  	  <h2 className="text-2xl font-semibold mb-4 text-gray-800">ទាញយករបាយការណ៍</h2>
+  	  
+  	  <div className="space-y-4">
+  	    {/* ជម្រើសប្រភេទ Report */}
+  	    <div>
+  	      <label className="block text-sm font-semibold text-gray-700 mb-1">
+  		ជ្រើសរើសប្រភេទរបាយការណ៍
+  	      </label>
+  	      <select 
+  		value={reportType} 
+  		onChange={handleTypeChange}
+  		className="w-full p-3 border border-gray-300 rounded-lg shadow-sm bg-white"
+  	      >
+  		<option value="current_month">ទាញយកខែបច្ចុប្បន្ន</option>
+  		<option value="select_month">ជ្រើសរើសខែឆ្នាំ</option>
+  		<option value="date_range">ជ្រើសរើសចន្លោះថ្ងៃ</option>
+  	      </select>
+  	    </div>
+  	    
+  	    {/* ជម្រើសកាលបរិច្ឆេទ */}
+  	    <div>
+  	      {renderOptions()}
+  	    </div>
+  	    
+  	    {/* ប៊ូតុងទាញយក */}
+  	    <div className="pt-4 flex flex-col sm:flex-row gap-3">
+  	      <button
+  		onClick={generateExcel}
+  		disabled={loading}
+  		className="flex-1 p-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 disabled:bg-gray-400 transition-all flex items-center justify-center gap-2"
+  	      >
+  		{loading ? 'កំពុងដំណើរការ...' : (
+  		  <>
+  		    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+  		      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+  		    </svg>
+  		    ទាញយក Excel
+  		  </>
+  		)}
+  	      </button>
+  	      <button
+  		onClick={generatePdf}
+  		disabled={loading}
+  		className="flex-1 p-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 disabled:bg-gray-400 transition-all flex items-center justify-center gap-2"
+  	      >
+  		{loading ? 'កំពុងដំណើរការ...' : (
+  		  <>
+  		    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+  		      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+â 		    </svg>
+  		    ទាញយក PDF
+  		  </>
+  		)}
+  	      </button>
+  	    </div>
+  	  </div>
   	</div>
-  	 
-  	{/* ជម្រើសកាលបរិច្ឆេទ */}
-  	<div>
-  	  {renderOptions()}
-  	</div>
-  	 
-  	{/* ប៊ូតុងទាញយក */}
-  	<div className="pt-4 flex flex-col sm:flex-row gap-3">
-  	  <button
-  	    onClick={generateExcel}
-  	    disabled={loading}
-  	    className="flex-1 p-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 disabled:bg-gray-400 transition-all flex items-center justify-center gap-2"
-  	  >
-  	    {loading ? 'កំពុងដំណើរការ...' : (
-  	      <>
-  		<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-  		  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-  		</svg>
-  		ទាញយក Excel
-  	      </>
-  	    )}
-  	  </button>
-  	  <button
-  	    onClick={generatePdf}
-  	    disabled={loading}
-  	    className="flex-1 p-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 disabled:bg-gray-400 transition-all flex items-center justify-center gap-2"
-  	  >
-  	    {loading ? 'កំពុងដំណើរការ...' : (
-  	      <>
-  		<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-  		  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-  		</svg>
-  		ទាញយក PDF
-  	      </>
-  	    )}
-  	  </button>
-  	</div>
-    </div>
-  </div>
   );
 }
