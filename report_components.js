@@ -82,10 +82,11 @@ function ReportDownloader({ expenses }) {
   
   // --- 3. Report Generation Logic ---
 
-  // --- 3a. Generate Excel ---
+  // (*** កែសម្រួលនៅទីនេះ ***)
+  // --- 3a. Generate Excel (កំណែទម្រង់ថ្មី ស្អាត) ---
   const generateExcel = () => {
     setLoading(true);
-    console.log("Starting Excel generation...");
+    console.log("Starting Excel generation (Standard Format)...");
     
     try {
       const data = getFilteredData();
@@ -95,10 +96,10 @@ function ReportDownloader({ expenses }) {
         return;
       }
 
-      const { XLSX } = window; // Get from CDN
-      const wb = XLSX.utils.book_new(); // Create new workbook
+      const { XLSX } = window;
+      const wb = XLSX.utils.book_new();
 
-      // --- Worksheet 1: Summary (សរុប) ---
+      // --- Worksheet 1: Summary (សរុបតាមប្រភេទ) ---
       const summary = {};
       let totalAmount = 0;
       data.forEach(ex => {
@@ -107,38 +108,93 @@ function ReportDownloader({ expenses }) {
         totalAmount += amount;
       });
       
-      const summaryData = Object.keys(summary).map((key, index) => ({
-        'ល.រ': index + 1,
-        'ឈ្មោះចំណាយ': key,
-        'ចំនួនទឹកប្រាក់': summary[key]
-      }));
-      // Add Total Row
-      summaryData.push({}); // Empty row
-      summaryData.push({ 'ឈ្មោះចំណាយ': 'សរុបទាំងអស់', 'ចំនួនទឹកប្រាក់': totalAmount });
-
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData, { 
-        header: ['ល.រ', 'ឈ្មោះចំណាយ', 'ចំនួនទឹកប្រាក់']
+      // បង្កើត Array សម្រាប់ Sheet ដោយដៃ (Array of Arrays)
+      let wsSummaryData = [];
+      // 1. បន្ថែមចំណងជើង (Title)
+      wsSummaryData.push([reportTitle, null, null]);
+      wsSummaryData.push([]); // ទុកចន្លោះមួយជួរ
+      
+      // 2. បន្ថែម Header
+      wsSummaryData.push(['ល.រ', 'ឈ្មោះចំណាយ', 'ចំនួនទឹកប្រាក់']);
+      
+      // 3. បន្ថែមទិន្នន័យ
+      Object.keys(summary).sort().forEach((key, index) => {
+        wsSummaryData.push([index + 1, key, summary[key]]);
       });
-      // Set column widths
-      wsSummary['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 20 }];
+      
+      // 4. បន្ថែម Total
+      wsSummaryData.push([]); // ទុកចន្លោះមួយជួរ
+      wsSummaryData.push([null, 'សរុបទាំងអស់ (Total)', totalAmount]);
+      
+      const wsSummary = XLSX.utils.aoa_to_sheet(wsSummaryData);
+      
+      // 5. កំណត់ទំហំជួរឈរ និង Merge Cell សម្រាប់ Title
+      wsSummary['!cols'] = [{ wch: 10 }, { wch: 30 }, { wch: 20 }];
+      wsSummary['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }]; // Merge A1 ដល់ C1
+      
       XLSX.utils.book_append_sheet(wb, wsSummary, "សរុបតាមប្រភេទ");
 
-      // --- Worksheet 2: Details ( chi tiết) ---
-      const detailsData = data.map((ex, index) => ({
-        'ល.រ': index + 1,
-        'កាលបរិច្ឆេទ': ex.date,
-        'ឈ្មោះចំណាយ': ex.expenseName,
-        'ចំនួនទឹកប្រាក់': parseFloat(ex.amount) || 0
-      }));
-      // Add Total Row
-      detailsData.push({}); // Empty row
-      detailsData.push({ 'ឈ្មោះចំណាយ': 'សរុបទាំងអស់', 'ចំនួនទឹកប្រាក់': totalAmount });
-
-      const wsDetails = XLSX.utils.json_to_sheet(detailsData, { 
-        header: ['ល.រ', 'កាលបរិច្ឆេទ', 'ឈ្មោះចំណាយ', 'ចំនួនទឹកប្រាក់']
+      // --- Worksheet 2: Details (ទម្រង់ Pivot/Cross-Tab តាមសំណូមពរ) ---
+      
+      // 1. រៀបចំទិន្នន័យ
+      const names = [...new Set(data.map(ex => ex.expenseName))].sort();
+      const dates = [...new Set(data.map(ex => ex.date))].sort();
+      const dataMap = new Map(); // Key: "name_date", Value: amount
+      data.forEach(ex => {
+        const key = `${ex.expenseName}_${ex.date}`;
+        const amount = parseFloat(ex.amount) || 0;
+        dataMap.set(key, (dataMap.get(key) || 0) + amount); // បូកសរុប បើមានឈ្មោះ និងថ្ងៃដូចគ្នា
       });
-      wsDetails['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 30 }, { wch: 20 }];
-      XLSX.utils.book_append_sheet(wb, wsDetails, "ទិន្នន័យលម្អិត");
+
+      let wsDetailsData = [];
+      let colWidths = [{ wch: 30 }]; // សម្រាប់ជួរ "ឈ្មោះចំណាយ"
+      
+      // 2. បន្ថែមចំណងជើង (Title)
+      wsDetailsData.push([reportTitle]);
+      wsDetailsData.push([]); // ទុកចន្លោះមួយជួរ
+      
+      // 3. បង្កើត Header (ឈ្មោះចំណាយ, Date 1, Date 2, ... , សរុប)
+      let headerRow = ['ឈ្មោះចំណាយ'];
+      dates.forEach(date => {
+        headerRow.push(date);
+        colWidths.push({ wch: 15 }); // កំណត់ទំហំជួរឈរកាលបរិច្ឆេទ
+      });
+      headerRow.push('សរុប');
+      colWidths.push({ wch: 20 }); // កំណត់ទំហំជួរឈរ "សរុប"
+      wsDetailsData.push(headerRow);
+      
+      // 4. បញ្ចូលទិន្នន័យ (Data Rows)
+      let colTotals = new Array(dates.length).fill(0);
+      let grandTotal = 0;
+      
+      names.forEach(name => {
+        let dataRow = [name];
+        let rowTotal = 0;
+        
+        dates.forEach((date, index) => {
+          const amount = dataMap.get(`${name}_${date}`) || 0;
+          dataRow.push(amount === 0 ? null : amount); // បង្ហាញ null (cell ទទេ) បើគ្មានចំណាយ
+          rowTotal += amount;
+          colTotals[index] += amount;
+        });
+        
+        dataRow.push(rowTotal); // បន្ថែម Total តាមជួរដេក
+        wsDetailsData.push(dataRow);
+        grandTotal += rowTotal;
+      });
+      
+      // 5. បន្ថែមជួរសរុប (Footer Row)
+      wsDetailsData.push([]); // ទុកចន្លោះមួយជួរ
+      let footerRow = ['សរុប'];
+      colTotals.forEach(total => footerRow.push(total));
+      footerRow.push(grandTotal);
+      wsDetailsData.push(footerRow);
+      
+      // 6. បង្កើត Sheet
+      const wsDetails = XLSX.utils.aoa_to_sheet(wsDetailsData);
+      wsDetails['!cols'] = colWidths;
+      wsDetails['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: dates.length + 1 } }]; // Merge Title
+      XLSX.utils.book_append_sheet(wb, wsDetails, "ទិន្នន័យលម្អិត (Pivot)");
       
       // --- Download File ---
       const fileName = `Expense_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -151,8 +207,10 @@ function ReportDownloader({ expenses }) {
     
     setLoading(false);
   };
+  // (*** ចប់ការកែសម្រួល ***)
 
-  // --- 3b. Generate PDF (ប្រើ Base64 ពី khmer_font_base64.js) ---
+
+  // --- 3b. Generate PDF (នៅដដែល គ្មានការកែប្រែ) ---
   const generatePdf = () => {
     setLoading(true);
     console.log("Starting PDF generation (Base64 Method)...");
