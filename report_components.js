@@ -10,13 +10,17 @@ function ReportDownloader({ expenses }) {
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
-  const [reportTitle, setReportTitle] = useState('របាយការណ៍ចំណាយប្រចាំខែបច្ចុប្បន្ន');
+  
+  // (*** កែសម្រួលនៅទីនេះ ***) 
+  // ចាប់ផ្តើមដោយចំណងជើងទទេ រង់ចាំ useEffect កំណត់ឱ្យ
+  const [reportTitle, setReportTitle] = useState(''); 
 
   // --- 1. UI Handlers ---
   const handleTypeChange = (e) => {
     const newType = e.target.value;
     setReportType(newType);
-    updateReportTitle(newType); // Update title when type changes
+    // យើងនឹងមិនហៅ updateReportTitle នៅទីនេះទេ 
+    // ទុកឱ្យ useEffect ខាងក្រោមជាអ្នកจัดการ
   };
 
   const updateReportTitle = (type, date1, date2) => {
@@ -43,14 +47,18 @@ function ReportDownloader({ expenses }) {
     }
   };
   
-  // Update title when dates change
+  // (*** កែសម្រួលនៅទីនេះ ***)
+  // useEffect នេះ នឹងដំណើរការរាល់ពេល Component បើកដំបូង 
+  // និងរាល់ពេលជម្រើស (filter) មានការផ្លាស់ប្តូរ
   useEffect(() => {
-    if (reportType === 'select_month') {
+    if (reportType === 'current_month') {
+        updateReportTitle(reportType);
+    } else if (reportType === 'select_month') {
       updateReportTitle(reportType, month);
     } else if (reportType === 'date_range') {
       updateReportTitle(reportType, startDate, endDate);
     }
-  }, [month, startDate, endDate, reportType]);
+  }, [month, startDate, endDate, reportType]); // គ្រប់គ្រង Title ទាំងអស់នៅកន្លែងតែមួយ
   
 
   // --- 2. Data Filtering Logic ---
@@ -82,8 +90,7 @@ function ReportDownloader({ expenses }) {
   
   // --- 3. Report Generation Logic ---
 
-  // (*** កែសម្រួលនៅទីនេះ ***)
-  // --- 3a. Generate Excel (កំណែទម្រង់ថ្មី ស្អាត) ---
+  // --- 3a. Generate Excel (កំណែទម្រង់ស្អាត) ---
   const generateExcel = () => {
     setLoading(true);
     console.log("Starting Excel generation (Standard Format)...");
@@ -99,6 +106,10 @@ function ReportDownloader({ expenses }) {
       const { XLSX } = window;
       const wb = XLSX.utils.book_new();
 
+      // (*** កែសម្រួលនៅទីនេះ ***)
+      // ប្រើ `reportTitle` (ពី State) ដែលបាន Update រួចរាល់
+      const currentReportTitle = reportTitle; 
+
       // --- Worksheet 1: Summary (សរុបតាមប្រភេទ) ---
       const summary = {};
       let totalAmount = 0;
@@ -108,10 +119,9 @@ function ReportDownloader({ expenses }) {
         totalAmount += amount;
       });
       
-      // បង្កើត Array សម្រាប់ Sheet ដោយដៃ (Array of Arrays)
       let wsSummaryData = [];
-      // 1. បន្ថែមចំណងជើង (Title)
-      wsSummaryData.push([reportTitle, null, null]);
+      // 1. បន្ថែមចំណងជើង (Title) - ប្រើចំណងជើងដែល Fix រួច
+      wsSummaryData.push([currentReportTitle, null, null]); 
       wsSummaryData.push([]); // ទុកចន្លោះមួយជួរ
       
       // 2. បន្ថែម Header
@@ -136,31 +146,30 @@ function ReportDownloader({ expenses }) {
 
       // --- Worksheet 2: Details (ទម្រង់ Pivot/Cross-Tab តាមសំណូមពរ) ---
       
-      // 1. រៀបចំទិន្នន័យ
       const names = [...new Set(data.map(ex => ex.expenseName))].sort();
       const dates = [...new Set(data.map(ex => ex.date))].sort();
       const dataMap = new Map(); // Key: "name_date", Value: amount
       data.forEach(ex => {
         const key = `${ex.expenseName}_${ex.date}`;
         const amount = parseFloat(ex.amount) || 0;
-        dataMap.set(key, (dataMap.get(key) || 0) + amount); // បូកសរុប បើមានឈ្មោះ និងថ្ងៃដូចគ្នា
+        dataMap.set(key, (dataMap.get(key) || 0) + amount); 
       });
 
       let wsDetailsData = [];
-      let colWidths = [{ wch: 30 }]; // សម្រាប់ជួរ "ឈ្មោះចំណាយ"
+      let colWidths = [{ wch: 30 }]; 
       
-      // 2. បន្ថែមចំណងជើង (Title)
-      wsDetailsData.push([reportTitle]);
+      // 2. បន្ថែមចំណងជើង (Title) - ប្រើចំណងជើងដែល Fix រួច
+      wsDetailsData.push([currentReportTitle]); 
       wsDetailsData.push([]); // ទុកចន្លោះមួយជួរ
       
       // 3. បង្កើត Header (ឈ្មោះចំណាយ, Date 1, Date 2, ... , សរុប)
       let headerRow = ['ឈ្មោះចំណាយ'];
       dates.forEach(date => {
         headerRow.push(date);
-        colWidths.push({ wch: 15 }); // កំណត់ទំហំជួរឈរកាលបរិច្ឆេទ
+        colWidths.push({ wch: 15 }); 
       });
       headerRow.push('សរុប');
-      colWidths.push({ wch: 20 }); // កំណត់ទំហំជួរឈរ "សរុប"
+      colWidths.push({ wch: 20 }); 
       wsDetailsData.push(headerRow);
       
       // 4. បញ្ចូលទិន្នន័យ (Data Rows)
@@ -173,18 +182,18 @@ function ReportDownloader({ expenses }) {
         
         dates.forEach((date, index) => {
           const amount = dataMap.get(`${name}_${date}`) || 0;
-          dataRow.push(amount === 0 ? null : amount); // បង្ហាញ null (cell ទទេ) បើគ្មានចំណាយ
+          dataRow.push(amount === 0 ? null : amount); 
           rowTotal += amount;
           colTotals[index] += amount;
         });
         
-        dataRow.push(rowTotal); // បន្ថែម Total តាមជួរដេក
+        dataRow.push(rowTotal); 
         wsDetailsData.push(dataRow);
         grandTotal += rowTotal;
       });
       
       // 5. បន្ថែមជួរសរុប (Footer Row)
-      wsDetailsData.push([]); // ទុកចន្លោះមួយជួរ
+      wsDetailsData.push([]); 
       let footerRow = ['សរុប'];
       colTotals.forEach(total => footerRow.push(total));
       footerRow.push(grandTotal);
@@ -207,7 +216,6 @@ function ReportDownloader({ expenses }) {
     
     setLoading(false);
   };
-  // (*** ចប់ការកែសម្រួល ***)
 
 
   // --- 3b. Generate PDF (នៅដដែល គ្មានការកែប្រែ) ---
@@ -239,6 +247,7 @@ function ReportDownloader({ expenses }) {
       
       doc.setFont('KantumruyPro', 'normal'); 
       doc.setFontSize(18);
+      // ប្រើ `reportTitle` (ពី State) ដែលបាន Update រួចរាល់
       doc.text(reportTitle, 105, 20, { align: 'center' }); 
 
       // --- Data for Table ---
