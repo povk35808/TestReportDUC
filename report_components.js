@@ -10,37 +10,40 @@ function ReportDownloader({ expenses }) {
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
-  
-  // (*** កែសម្រួលនៅទីនេះ ***) 
-  // ចាប់ផ្តើមដោយចំណងជើងទទេ រង់ចាំ useEffect កំណត់ឱ្យ
-  const [reportTitle, setReportTitle] = useState(''); 
+  const [reportTitle, setReportTitle] = useState(''); // ចាប់ផ្តើមដោយទទេ
 
   // --- 1. UI Handlers ---
   const handleTypeChange = (e) => {
     const newType = e.target.value;
     setReportType(newType);
-    // យើងនឹងមិនហៅ updateReportTitle នៅទីនេះទេ 
-    // ទុកឱ្យ useEffect ខាងក្រោមជាអ្នកจัดการ
   };
 
-  const updateReportTitle = (type, date1, date2) => {
+  // (*** កែសម្រួលនៅទីនេះ ***)
+  // Function នេះ ឥឡូវអានពី State ដោយផ្ទាល់ មិនបាច់ប្រើ Parameters ទេ
+  const updateReportTitle = () => {
     const now = new Date();
     const kmLocale = 'km-KH';
     const monthYearOptions = { year: 'numeric', month: 'long', timeZone: 'UTC' };
     const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
 
-    switch(type) {
+    switch(reportType) { // អាន 'reportType' ពី State
       case 'current_month':
         setReportTitle(`របាយការណ៍ចំណាយ ${now.toLocaleDateString(kmLocale, monthYearOptions)}`);
         break;
       case 'select_month':
-        const monthDate = date1 ? new Date(date1) : new Date(month);
-        setReportTitle(`របាយការណ៍ចំណាយ ${monthDate.toLocaleDateString(kmLocale, monthYearOptions)}`);
+        const monthDate = new Date(month); // អាន 'month' ពី State
+        // ត្រូវប្រាកដថា monthDate ត្រឹមត្រូវ មុនពេលបំប្លែង
+        if (!isNaN(monthDate.getTime())) {
+          setReportTitle(`របាយការណ៍ចំណាយ ${monthDate.toLocaleDateString(kmLocale, monthYearOptions)}`);
+        }
         break;
       case 'date_range':
-        const d1 = date1 ? new Date(date1) : new Date(startDate);
-        const d2 = date2 ? new Date(date2) : new Date(endDate);
-        setReportTitle(`របាយការណ៍ពី ${d1.toLocaleDateString(kmLocale, dateOptions)} ដល់ ${d2.toLocaleDateString(kmLocale, dateOptions)}`);
+        const d1 = new Date(startDate); // អាន 'startDate' ពី State
+        const d2 = new Date(endDate); // អាន 'endDate' ពី State
+        // ត្រូវប្រាកដថា កាលបរិច្ឆេទ ទាំងពីរ ត្រឹមត្រូវ
+        if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+          setReportTitle(`របាយការណ៍ពី ${d1.toLocaleDateString(kmLocale, dateOptions)} ដល់ ${d2.toLocaleDateString(kmLocale, dateOptions)}`);
+        }
         break;
       default:
         setReportTitle('របាយការណ៍ចំណាយ');
@@ -48,16 +51,9 @@ function ReportDownloader({ expenses }) {
   };
   
   // (*** កែសម្រួលនៅទីនេះ ***)
-  // useEffect នេះ នឹងដំណើរការរាល់ពេល Component បើកដំបូង 
-  // និងរាល់ពេលជម្រើស (filter) មានការផ្លាស់ប្តូរ
+  // useEffect នេះ នឹងដំណើរការរាល់ពេល filter ផ្លាស់ប្តូរ
   useEffect(() => {
-    if (reportType === 'current_month') {
-        updateReportTitle(reportType);
-    } else if (reportType === 'select_month') {
-      updateReportTitle(reportType, month);
-    } else if (reportType === 'date_range') {
-      updateReportTitle(reportType, startDate, endDate);
-    }
+    updateReportTitle();
   }, [month, startDate, endDate, reportType]); // គ្រប់គ្រង Title ទាំងអស់នៅកន្លែងតែមួយ
   
 
@@ -107,7 +103,7 @@ function ReportDownloader({ expenses }) {
       const wb = XLSX.utils.book_new();
 
       // (*** កែសម្រួលនៅទីនេះ ***)
-      // ប្រើ `reportTitle` (ពី State) ដែលបាន Update រួចរាល់
+      // ប្រើ `reportTitle` (ពី State) ដែលបាន Update ចុងក្រោយបង្អស់
       const currentReportTitle = reportTitle; 
 
       // --- Worksheet 1: Summary (សរុបតាមប្រភេទ) ---
@@ -247,7 +243,7 @@ function ReportDownloader({ expenses }) {
       
       doc.setFont('KantumruyPro', 'normal'); 
       doc.setFontSize(18);
-      // ប្រើ `reportTitle` (ពី State) ដែលបាន Update រួចរាល់
+      // ប្រើ `reportTitle` (ពី State) ដែលបាន Update ចុងក្រោយបង្អស់
       doc.text(reportTitle, 105, 20, { align: 'center' }); 
 
       // --- Data for Table ---
@@ -375,6 +371,12 @@ function ReportDownloader({ expenses }) {
   	      {renderOptions()}
   	    </div>
   	    
+        {/* បង្ហាញចំណងជើងដែលនឹងត្រូវ Export */}
+        <div className="pt-2">
+          <p className="text-sm font-semibold text-gray-700">ចំណងជើងរបាយការណ៍៖</p>
+          <p className="text-md text-blue-600 font-bold">{reportTitle || '...'}</p>
+        </div>
+
   	    {/* ប៊ូតុងទាញយក */}
   	    <div className="pt-4 flex flex-col sm:flex-row gap-3">
   	      <button
