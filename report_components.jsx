@@ -1,9 +1,8 @@
 // ត្រូវប្រាកដថា React ត្រូវបានទាញយកជា Global រួចហើយ
-// នៅក្នុង setup របស់អ្នក, React គឺ global ដូច្នេះមិនចាំបាច់ import
 const { useState, useEffect, useMemo } = React;
 
 // --- 1. Custom Hook សម្រាប់បង្កើត Excel ---
-// Hook នេះផ្ទុក Logic ទាំងអស់សម្រាប់ការបង្កើត Excel
+// (Hook នេះមិនមានការកែប្រែទេ ព្រោះ Excel ដំណើរការល្អ)
 function useExcelGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -18,7 +17,7 @@ function useExcelGenerator() {
         return;
       }
 
-      const { XLSX } = window; // ហៅពី Global (CDN)
+      const { XLSX } = window;
       const wb = XLSX.utils.book_new();
       const currentReportTitle = reportTitle; 
 
@@ -77,21 +76,20 @@ function useExcelGenerator() {
           rowTotal += amount;
           colTotals[index] += amount;
         });
-        dataRow.push(rowTotal); 
-        wsDetailsData.push(dataRow);
-        grandTotal += rowTotal;
-      });
-      wsDetailsData.push([]); 
-      let footerRow = ['សរុប'];
-      colTotals.forEach(total => footerRow.push(total));
-      footerRow.push(grandTotal);
-      wsDetailsData.push(footerRow);
-      const wsDetails = XLSX.utils.aoa_to_sheet(wsDetailsData);
-      wsDetails['!cols'] = colWidths;
-      wsDetails['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: dates.length + 1 } }]; 
-      XLSX.utils.book_append_sheet(wb, wsDetails, "ទិន្នន័យលម្អិត (Pivot)");
-      
-  	  // --- Download File ---
+  	dataRow.push(rowTotal); 
+  	wsDetailsData.push(dataRow);
+  	grandTotal += rowTotal;
+    });
+    wsDetailsData.push([]); 
+    let footerRow = ['សរុប'];
+    colTotals.forEach(total => footerRow.push(total));
+    footerRow.push(grandTotal);
+    wsDetailsData.push(footerRow);
+    const wsDetails = XLSX.utils.aoa_to_sheet(wsDetailsData);
+    wsDetails['!cols'] = colWidths;
+    wsDetails['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: dates.length + 1 } }]; 
+    XLSX.utils.book_append_sheet(wb, wsDetails, "ទិន្នន័យលម្អិត (Pivot)");
+  	  
   	  const fileName = `Expense_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
   	  XLSX.writeFile(wb, fileName);
 
@@ -103,12 +101,11 @@ function useExcelGenerator() {
     setIsGenerating(false);
   };
 
-  // ត្រឡប់ state និង function ទៅឱ្យ Component ប្រើ
   return { isGenerating, generateExcel };
 }
 
 // --- 2. Custom Hook សម្រាប់បង្កើត PDF ---
-// Hook នេះផ្ទុក Logic ទាំងអស់សម្រាប់ការបង្កើត PDF
+// (*** កែសម្រួលនៅទីនេះ ***)
 function usePdfGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -123,7 +120,7 @@ function usePdfGenerator() {
   	    return;
   	  }
   	  
-  	  const { jsPDF } = window.jspdf; // ហៅពី Global (CDN)
+  	  const { jsPDF } = window.jspdf;
   	  const doc = new jsPDF();
   	  
   	  if (!MySokhaApp.khmerFontBase64 || MySokhaApp.khmerFontBase64.trim() === "") {
@@ -160,6 +157,8 @@ function usePdfGenerator() {
   	    theme: 'grid', 
   	    styles: { font: 'KantumruyPro', fontStyle: 'normal', halign: 'left' },
   	    headStyles: { fillColor: [22, 160, 133], textColor: 255, fontStyle: 'normal' },
+        // (*** នេះគឺជាការជួសជុល (FIX) សម្រាប់ Font ខូច ***)
+        bodyStyles: { font: 'KantumruyPro', fontStyle: 'normal' },
   	    foot: [totalRow], 
   	    footStyles: { fillColor: [241, 196, 15], textColor: 0, fontStyle: 'normal' },
   	    columnStyles: {
@@ -185,7 +184,8 @@ function usePdfGenerator() {
 
 
 // ----------------------------------------------------
-// Component សម្រាប់ទំព័ររបាយការណ៍ (ឥឡូវស្អាតជាងមុន)
+// Component សម្រាប់ទំព័ររបាយការណ៍
+// (*** កែសម្រួលនៅទីនេះ ***)
 // ----------------------------------------------------
 function ReportDownloader({ expenses }) {
   const [reportType, setReportType] = useState('current_month');
@@ -200,6 +200,7 @@ function ReportDownloader({ expenses }) {
     setReportType(newType);
   };
 
+  // (*** នេះគឺជាការជួសជុល (FIX) សម្រាប់ "November 2025" ***)
   const updateReportTitle = () => {
     const now = new Date();
     const kmLocale = 'km-KH';
@@ -207,24 +208,29 @@ function ReportDownloader({ expenses }) {
     const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
 
     switch(reportType) { 
-      case 'current_month':
-  	setReportTitle(`របាយការណ៍ចំណាយ ${now.toLocaleDateString(kmLocale, monthYearOptions)}`);
-  	break;
+      case 'current_month':
+  	  setReportTitle(`របាយការណ៍ចំណាយ ${now.toLocaleDateString(kmLocale, monthYearOptions)}`);
+  	  break;
       case 'select_month':
-  	const monthDate = new Date(month); 
+        // ប្រើ Date.UTC() ដើម្បីចៀសវាងបញ្ហា Timezone
+        const [year, monthNum] = month.split('-').map(Number);
+  	    const monthDate = new Date(Date.UTC(year, monthNum - 1, 1)); 
         if (!isNaN(monthDate.getTime())) {
-  	  setReportTitle(`របាយការណ៍ចំណាយ ${monthDate.toLocaleDateString(kmLocale, monthYearOptions)}`);
+  	      setReportTitle(`របាយការណ៍ចំណាយ ${monthDate.toLocaleDateString(kmLocale, monthYearOptions)}`);
         }
-  	break;
+  	    break;
       case 'date_range':
-  	const d1 = new Date(startDate); 
-  	const d2 = new Date(endDate); 
-        if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
-  	  setReportTitle(`របាយការណ៍ពី ${d1.toLocaleDateString(kmLocale, dateOptions)} ដល់ ${d2.toLocaleDateString(kmLocale, dateOptions)}`);
+        // ប្រើ Date.UTC() ដើម្បីចៀសវាងបញ្ហា Timezone
+        const [y1, m1, d1] = startDate.split('-').map(Number);
+        const [y2, m2, d2] = endDate.split('-').map(Number);
+  	    const date1 = new Date(Date.UTC(y1, m1 - 1, d1)); 
+  	    const date2 = new Date(Date.UTC(y2, m2 - 1, d2)); 
+        if (!isNaN(date1.getTime()) && !isNaN(date2.getTime())) {
+  	      setReportTitle(`របាយការណ៍ពី ${date1.toLocaleDateString(kmLocale, dateOptions)} ដល់ ${date2.toLocaleDateString(kmLocale, dateOptions)}`);
         }
-  	break;
+  	    break;
       default:
-  	setReportTitle('របាយការណ៍ចំណាយ');
+  	    setReportTitle('របាយការណ៍ចំណាយ');
     }
   };
   
@@ -235,7 +241,6 @@ function ReportDownloader({ expenses }) {
 
   // --- 2. Data Filtering Logic (ប្រើ useMemo) ---
   const filteredData = useMemo(() => {
-  	console.log("Filtering data...");
   	const now = new Date();
   	const currentYear = now.getFullYear();
   	const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
