@@ -1,16 +1,200 @@
 // ត្រូវប្រាកដថា React ត្រូវបានទាញយកជា Global រួចហើយ
 const { useState, useEffect, useMemo } = React;
 
+// (*** វិធីសាស្រ្តថ្មី ***)
+// --- 1. Custom Hook សម្រាប់បង្កើត Excel ---
+// Hook នេះនឹងផ្ទុក Logic ទាំងអស់សម្រាប់ការបង្កើត Excel
+function useExcelGenerator() {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Function នេះ ទទួល data និង title ពី Component
+  const generateExcel = (data, reportTitle) => {
+    setIsGenerating(true);
+    console.log("Starting Excel generation (React Hook)...");
+    
+    try {
+      if (data.length === 0) {
+        alert("មិនមានទិន្នន័យសម្រាប់ទាញយកပါ။");
+        setIsGenerating(false);
+        return;
+      }
+
+      const { XLSX } = window;
+      const wb = XLSX.utils.book_new();
+      const currentReportTitle = reportTitle; 
+
+      // --- Worksheet 1: Summary ---
+      const summary = {};
+      let totalAmount = 0;
+      data.forEach(ex => {
+        const amount = parseFloat(ex.amount) || 0;
+        summary[ex.expenseName] = (summary[ex.expenseName] || 0) + amount;
+        totalAmount += amount;
+      });
+      
+      let wsSummaryData = [];
+      wsSummaryData.push([currentReportTitle, null, null]); 
+      wsSummaryData.push([]); 
+      wsSummaryData.push(['ល.រ', 'ឈ្មោះចំណាយ', 'ចំនួនទឹកប្រាក់']);
+      Object.keys(summary).sort().forEach((key, index) => {
+        wsSummaryData.push([index + 1, key, summary[key]]);
+      });
+      wsSummaryData.push([]); 
+      wsSummaryData.push([null, 'សរុបទាំងអស់ (Total)', totalAmount]);
+      const wsSummary = XLSX.utils.aoa_to_sheet(wsSummaryData);
+      wsSummary['!cols'] = [{ wch: 10 }, { wch: 30 }, { wch: 20 }];
+      wsSummary['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }]; 
+      XLSX.utils.book_append_sheet(wb, wsSummary, "សរុបតាមប្រភេទ");
+
+      // --- Worksheet 2: Details (Pivot) ---
+      const names = [...new Set(data.map(ex => ex.expenseName))].sort();
+      const dates = [...new Set(data.map(ex => ex.date))].sort();
+      const dataMap = new Map(); 
+      data.forEach(ex => {
+        const key = `${ex.expenseName}_${ex.date}`;
+        const amount = parseFloat(ex.amount) || 0;
+        dataMap.set(key, (dataMap.get(key) || 0) + amount); 
+      });
+      let wsDetailsData = [];
+      let colWidths = [{ wch: 30 }]; 
+      wsDetailsData.push([currentReportTitle]); 
+      wsDetailsData.push([]); 
+      let headerRow = ['ឈ្មោះចំណាយ'];
+      dates.forEach(date => {
+        headerRow.push(date);
+        colWidths.push({ wch: 15 }); 
+      });
+      headerRow.push('សរុប');
+      colWidths.push({ wch: 20 }); 
+      wsDetailsData.push(headerRow);
+      let colTotals = new Array(dates.length).fill(0);
+      let grandTotal = 0;
+      names.forEach(name => {
+        let dataRow = [name];
+        let rowTotal = 0;
+        dates.forEach((date, index) => {
+          const amount = dataMap.get(`${name}_${date}`) || 0;
+          dataRow.push(amount === 0 ? null : amount); 
+          rowTotal += amount;
+          colTotals[index] += amount;
+        });
+        dataRow.push(rowTotal); 
+        wsDetailsData.push(dataRow);
+        grandTotal += rowTotal;
+      });
+      wsDetailsData.push([]); 
+      let footerRow = ['សរុប'];
+      colTotals.forEach(total => footerRow.push(total));
+      footerRow.push(grandTotal);
+      wsDetailsData.push(footerRow);
+      const wsDetails = XLSX.utils.aoa_to_sheet(wsDetailsData);
+      wsDetails['!cols'] = colWidths;
+      wsDetails['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: dates.length + 1 } }]; 
+      XLSX.utils.book_append_sheet(wb, wsDetails, "ទិន្នន័យលម្អិត (Pivot)");
+      
+      // --- Download File ---
+      const fileName = `Expense_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+    } catch (error) {
+      console.error("Error generating Excel:", error);
+      alert("មានបញ្ហាក្នុងការបង្កើត Excel file។");
+    }
+    
+    setIsGenerating(false);
+  };
+
+  // ត្រឡប់ state និង function ទៅឱ្យ Component ប្រើ
+  return { isGenerating, generateExcel };
+}
+
+// (*** វិធីសាស្រ្តថ្មី ***)
+// --- 2. Custom Hook សម្រាប់បង្កើត PDF ---
+// Hook នេះនឹងផ្ទុក Logic ទាំងអស់សម្រាប់ការបង្កើត PDF
+function usePdfGenerator() {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const generatePdf = (data, reportTitle) => {
+    setIsGenerating(true);
+    console.log("Starting PDF generation (React Hook)...");
+
+    try {
+      if (data.length === 0) {
+        alert("មិនមានទិន្នន័យសម្រាប់ទាញយកပါ။");
+        setIsGenerating(false);
+        return;
+      }
+      
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      if (!MySokhaApp.khmerFontBase64 || MySokhaApp.khmerFontBase64.trim() === "") {
+        alert("Error: មិនអាចទាញយក Font ខ្មែរ (Base64) បានទេ។\n\nសូម Hard Refresh (Ctrl+Shift+R)។");
+        setIsGenerating(false);
+        return;
+      }
+      
+      doc.addFileToVFS('KantumruyPro-Regular.ttf', MySokhaApp.khmerFontBase64);
+      doc.addFont('KantumruyPro-Regular.ttf', 'KantumruyPro', 'normal');
+      doc.setFont('KantumruyPro', 'normal'); 
+      doc.setFontSize(18);
+      doc.text(reportTitle, 105, 20, { align: 'center' }); 
+
+      let totalAmount = 0;
+      const tableBody = data.map((ex, index) => {
+        const amount = parseFloat(ex.amount) || 0;
+        totalAmount += amount;
+        return [
+          index + 1,
+          ex.date,
+          ex.expenseName,
+          amount.toLocaleString('en-US') + ' ៛'
+        ];
+      });
+
+      const totalRow = ["", "", "សរុបទាំងអស់ (Total)", totalAmount.toLocaleString('en-US') + ' ៛'];
+      tableBody.push(totalRow);
+
+      doc.autoTable({
+        startY: 30, 
+        head: [['ល.រ', 'កាលបរិច្ឆេទ', 'ឈ្មោះចំណាយ', 'ចំនួនទឹកប្រាក់']],
+        body: tableBody,
+        theme: 'grid', 
+        styles: { font: 'KantumruyPro', fontStyle: 'normal', halign: 'left' },
+        headStyles: { fillColor: [22, 160, 133], textColor: 255, fontStyle: 'normal' },
+        foot: [totalRow], 
+        footStyles: { fillColor: [241, 196, 15], textColor: 0, fontStyle: 'normal' },
+        columnStyles: {
+  	  0: { halign: 'center', cellWidth: 10 }, 
+  	  2: { cellWidth: 80 }, 
+  	  3: { halign: 'right', cellWidth: 40 }
+  	}
+  	  });
+  	  
+  	  const fileName = `Expense_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+  	  doc.save(fileName);
+
+    } catch (error) {
+  	  console.error("Error generating PDF:", error);
+  	  alert("មានបញ្ហាក្នុងការបង្កើត PDF file។");
+    }
+
+  	setIsGenerating(false);
+  };
+  
+  return { isGenerating, generatePdf };
+}
+
+
 // ----------------------------------------------------
-// (ថ្មី) Component សម្រាប់ទំព័ររបាយការណ៍
+// (កែសម្រួលនៅទីនេះ) Component សម្រាប់ទំព័ររបាយការណ៍
 // ----------------------------------------------------
 function ReportDownloader({ expenses }) {
   const [reportType, setReportType] = useState('current_month');
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [loading, setLoading] = useState(false);
-  const [reportTitle, setReportTitle] = useState(''); // ចាប់ផ្តើមដោយទទេ
+  const [reportTitle, setReportTitle] = useState(''); 
 
   // --- 1. UI Handlers ---
   const handleTypeChange = (e) => {
@@ -18,29 +202,25 @@ function ReportDownloader({ expenses }) {
     setReportType(newType);
   };
 
-  // (*** កែសម្រួលនៅទីនេះ ***)
-  // Function នេះ ឥឡូវអានពី State ដោយផ្ទាល់ មិនបាច់ប្រើ Parameters ទេ
   const updateReportTitle = () => {
     const now = new Date();
     const kmLocale = 'km-KH';
     const monthYearOptions = { year: 'numeric', month: 'long', timeZone: 'UTC' };
     const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
 
-    switch(reportType) { // អាន 'reportType' ពី State
+    switch(reportType) { 
       case 'current_month':
         setReportTitle(`របាយការណ៍ចំណាយ ${now.toLocaleDateString(kmLocale, monthYearOptions)}`);
         break;
       case 'select_month':
-        const monthDate = new Date(month); // អាន 'month' ពី State
-        // ត្រូវប្រាកដថា monthDate ត្រឹមត្រូវ មុនពេលបំប្លែង
+        const monthDate = new Date(month); 
         if (!isNaN(monthDate.getTime())) {
           setReportTitle(`របាយការណ៍ចំណាយ ${monthDate.toLocaleDateString(kmLocale, monthYearOptions)}`);
         }
         break;
       case 'date_range':
-        const d1 = new Date(startDate); // អាន 'startDate' ពី State
-        const d2 = new Date(endDate); // អាន 'endDate' ពី State
-        // ត្រូវប្រាកដថា កាលបរិច្ឆេទ ទាំងពីរ ត្រឹមត្រូវ
+        const d1 = new Date(startDate); 
+        const d2 = new Date(endDate); 
         if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
           setReportTitle(`របាយការណ៍ពី ${d1.toLocaleDateString(kmLocale, dateOptions)} ដល់ ${d2.toLocaleDateString(kmLocale, dateOptions)}`);
         }
@@ -50,20 +230,18 @@ function ReportDownloader({ expenses }) {
     }
   };
   
-  // (*** កែសម្រួលនៅទីនេះ ***)
-  // useEffect នេះ នឹងដំណើរការរាល់ពេល filter ផ្លាស់ប្តូរ
   useEffect(() => {
     updateReportTitle();
-  }, [month, startDate, endDate, reportType]); // គ្រប់គ្រង Title ទាំងអស់នៅកន្លែងតែមួយ
+  }, [month, startDate, endDate, reportType]); 
   
 
-  // --- 2. Data Filtering Logic ---
-  const getFilteredData = () => {
+  // --- 2. (*** កែសម្រួលនៅទីនេះ ***) Data Filtering Logic (ប្រើ useMemo) ---
+  const filteredData = useMemo(() => {
+    console.log("Filtering data...");
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
     const currentMonthStr = `${currentYear}-${currentMonth}`;
-
     let filtered = [];
 
     switch(reportType) {
@@ -79,237 +257,31 @@ function ReportDownloader({ expenses }) {
       default:
         filtered = [];
     }
-    
-    // Sort data by date
+    // ត្រឡប់ទិន្នន័យដែលបានតម្រៀប
     return filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
-  };
+  }, [expenses, reportType, month, startDate, endDate]); // គណនាឡើងវិញ តែពេលទិន្នន័យនេះផ្លាស់ប្តូរ
   
-  // --- 3. Report Generation Logic ---
+  
+  // --- 3. (*** កែសម្រួលនៅទីនេះ ***) ហៅ Custom Hooks ---
+  // ប្រើ Hook ជំនួស Function ចាស់
+  const { isGenerating: isExcelLoading, generateExcel } = useExcelGenerator();
+  const { isGenerating: isPdfLoading, generatePdf } = usePdfGenerator();
+  
+  // loading state ឥឡូវត្រូវបានគ្រប់គ្រងដោយ Hook ទាំងពីរ
+  const loading = isExcelLoading || isPdfLoading; 
 
-  // --- 3a. Generate Excel (កំណែទម្រង់ស្អាត) ---
-  const generateExcel = () => {
-    setLoading(true);
-    console.log("Starting Excel generation (Standard Format)...");
-    
-    try {
-      const data = getFilteredData();
-      if (data.length === 0) {
-        alert("មិនមានទិន្នន័យសម្រាប់ទាញយកပါ။");
-        setLoading(false);
-        return;
-      }
+  // បង្កើត Function សម្រាប់ប៊ូតុងចុច
+  const handleExcelDownload = () => {
+    // បញ្ជូនទិន្នន័យដែលបាន filter និង ចំណងជើង ទៅឱ្យ Hook
+    generateExcel(filteredData, reportTitle);
+  };
 
-      const { XLSX } = window;
-      const wb = XLSX.utils.book_new();
+  const handlePdfDownload = () => {
+    // បញ្ជូនទិន្នន័យដែលបាន filter និង ចំណងជើង ទៅឱ្យ Hook
+    generatePdf(filteredData, reportTitle);
+  };
 
-      // (*** កែសម្រួលនៅទីនេះ ***)
-      // ប្រើ `reportTitle` (ពី State) ដែលបាន Update ចុងក្រោយបង្អស់
-      const currentReportTitle = reportTitle; 
-
-      // --- Worksheet 1: Summary (សរុបតាមប្រភេទ) ---
-      const summary = {};
-      let totalAmount = 0;
-      data.forEach(ex => {
-        const amount = parseFloat(ex.amount) || 0;
-        summary[ex.expenseName] = (summary[ex.expenseName] || 0) + amount;
-        totalAmount += amount;
-      });
-      
-      let wsSummaryData = [];
-      // 1. បន្ថែមចំណងជើង (Title) - ប្រើចំណងជើងដែល Fix រួច
-      wsSummaryData.push([currentReportTitle, null, null]); 
-      wsSummaryData.push([]); // ទុកចន្លោះមួយជួរ
-      
-      // 2. បន្ថែម Header
-      wsSummaryData.push(['ល.រ', 'ឈ្មោះចំណាយ', 'ចំនួនទឹកប្រាក់']);
-      
-      // 3. បន្ថែមទិន្នន័យ
-      Object.keys(summary).sort().forEach((key, index) => {
-        wsSummaryData.push([index + 1, key, summary[key]]);
-      });
-      
-      // 4. បន្ថែម Total
-      wsSummaryData.push([]); // ទុកចន្លោះមួយជួរ
-      wsSummaryData.push([null, 'សរុបទាំងអស់ (Total)', totalAmount]);
-      
-      const wsSummary = XLSX.utils.aoa_to_sheet(wsSummaryData);
-      
-      // 5. កំណត់ទំហំជួរឈរ និង Merge Cell សម្រាប់ Title
-      wsSummary['!cols'] = [{ wch: 10 }, { wch: 30 }, { wch: 20 }];
-      wsSummary['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }]; // Merge A1 ដល់ C1
-      
-      XLSX.utils.book_append_sheet(wb, wsSummary, "សរុបតាមប្រភេទ");
-
-      // --- Worksheet 2: Details (ទម្រង់ Pivot/Cross-Tab តាមសំណូមពរ) ---
-      
-      const names = [...new Set(data.map(ex => ex.expenseName))].sort();
-      const dates = [...new Set(data.map(ex => ex.date))].sort();
-      const dataMap = new Map(); // Key: "name_date", Value: amount
-      data.forEach(ex => {
-        const key = `${ex.expenseName}_${ex.date}`;
-        const amount = parseFloat(ex.amount) || 0;
-        dataMap.set(key, (dataMap.get(key) || 0) + amount); 
-      });
-
-      let wsDetailsData = [];
-      let colWidths = [{ wch: 30 }]; 
-      
-      // 2. បន្ថែមចំណងជើង (Title) - ប្រើចំណងជើងដែល Fix រួច
-      wsDetailsData.push([currentReportTitle]); 
-      wsDetailsData.push([]); // ទុកចន្លោះមួយជួរ
-      
-      // 3. បង្កើត Header (ឈ្មោះចំណាយ, Date 1, Date 2, ... , សរុប)
-      let headerRow = ['ឈ្មោះចំណាយ'];
-      dates.forEach(date => {
-        headerRow.push(date);
-        colWidths.push({ wch: 15 }); 
-      });
-      headerRow.push('សរុប');
-      colWidths.push({ wch: 20 }); 
-      wsDetailsData.push(headerRow);
-      
-      // 4. បញ្ចូលទិន្នន័យ (Data Rows)
-      let colTotals = new Array(dates.length).fill(0);
-      let grandTotal = 0;
-      
-      names.forEach(name => {
-        let dataRow = [name];
-        let rowTotal = 0;
-        
-        dates.forEach((date, index) => {
-          const amount = dataMap.get(`${name}_${date}`) || 0;
-          dataRow.push(amount === 0 ? null : amount); 
-          rowTotal += amount;
-          colTotals[index] += amount;
-        });
-        
-        dataRow.push(rowTotal); 
-        wsDetailsData.push(dataRow);
-        grandTotal += rowTotal;
-      });
-      
-      // 5. បន្ថែមជួរសរុប (Footer Row)
-      wsDetailsData.push([]); 
-      let footerRow = ['សរុប'];
-      colTotals.forEach(total => footerRow.push(total));
-      footerRow.push(grandTotal);
-      wsDetailsData.push(footerRow);
-      
-      // 6. បង្កើត Sheet
-      const wsDetails = XLSX.utils.aoa_to_sheet(wsDetailsData);
-      wsDetails['!cols'] = colWidths;
-      wsDetails['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: dates.length + 1 } }]; // Merge Title
-      XLSX.utils.book_append_sheet(wb, wsDetails, "ទិន្នន័យលម្អិត (Pivot)");
-      
-      // --- Download File ---
-      const fileName = `Expense_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(wb, fileName);
-
-    } catch (error) {
-      console.error("Error generating Excel:", error);
-      alert("មានបញ្ហាក្នុងការបង្កើត Excel file។");
-    }
-    
-    setLoading(false);
-  };
-
-
-  // --- 3b. Generate PDF (នៅដដែល គ្មានការកែប្រែ) ---
-  const generatePdf = () => {
-    setLoading(true);
-    console.log("Starting PDF generation (Base64 Method)...");
-
-    try {
-      const data = getFilteredData();
-      if (data.length === 0) {
-        alert("មិនមានទិន្នន័យសម្រាប់ទាញយកပါ။");
-        setLoading(false);
-        return;
-      }
-      
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      
-      // ពិនិត្យមើល MySokhaApp.khmerFontBase64
-      if (!MySokhaApp.khmerFontBase64 || MySokhaApp.khmerFontBase64.trim() === "") {
-        alert("Error: មិនអាចទាញយក Font ខ្មែរ (Base64) បានទេ។\n\nសូម Hard Refresh (Ctrl+Shift+R)។");
-        setLoading(false);
-        return;
-      }
-      
-      // Register Font 'normal'
-      doc.addFileToVFS('KantumruyPro-Regular.ttf', MySokhaApp.khmerFontBase64);
-      doc.addFont('KantumruyPro-Regular.ttf', 'KantumruyPro', 'normal');
-      
-      doc.setFont('KantumruyPro', 'normal'); 
-      doc.setFontSize(18);
-      // ប្រើ `reportTitle` (ពី State) ដែលបាន Update ចុងក្រោយបង្អស់
-      doc.text(reportTitle, 105, 20, { align: 'center' }); 
-
-      // --- Data for Table ---
-      let totalAmount = 0;
-      const tableBody = data.map((ex, index) => {
-        const amount = parseFloat(ex.amount) || 0;
-        totalAmount += amount;
-        return [
-          index + 1,
-          ex.date,
-          ex.expenseName,
-          amount.toLocaleString('en-US') + ' ៛'
-        ];
-      });
-
-      // --- Add Total Row ---
-      const totalRow = [
-        "", 
-        "", 
-        "សរុបទាំងអស់ (Total)",
-        totalAmount.toLocaleString('en-US') + ' ៛'
-      ];
-      tableBody.push(totalRow);
-
-      // --- Create Table using AutoTable ---
-      doc.autoTable({
-        startY: 30, 
-        head: [['ល.រ', 'កាលបរិច្ឆេទ', 'ឈ្មោះចំណាយ', 'ចំនួនទឹកប្រាក់']],
-        body: tableBody,
-        theme: 'grid', 
-        styles: {
-          font: 'KantumruyPro',
-          fontStyle: 'normal', 
-          halign: 'left'
-        },
-        headStyles: {
-          fillColor: [22, 160, 133], 
-          textColor: 255,
-          fontStyle: 'normal', 
-        },
-        foot: [totalRow], 
-        footStyles: {
-          fillColor: [241, 196, 15], 
-          textColor: 0,
-          fontStyle: 'normal',
-        },
-        columnStyles: {
-          0: { halign: 'center', cellWidth: 10 }, 
-          2: { cellWidth: 80 }, 
-          3: { halign: 'right', cellWidth: 40 }
-        }
-  	  });
-  	  
-  	  // --- Download File ---
-  	  const fileName = `Expense_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-  	  doc.save(fileName);
-
-    } catch (error) {
-  	  console.error("Error generating PDF:", error);
-  	  alert("មានបញ្ហាក្នុងការបង្កើត PDF file។");
-    }
-
-  	setLoading(false);
-  };
-  
-  // --- 4. Render UI ---
+  // --- 4. Render UI (នៅដដែល) ---
   const renderOptions = () => {
   	switch(reportType) {
   	  case 'select_month':
@@ -380,9 +352,10 @@ function ReportDownloader({ expenses }) {
   	    {/* ប៊ូតុងទាញយក */}
   	    <div className="pt-4 flex flex-col sm:flex-row gap-3">
   	      <button
-  		onClick={generateExcel}
-  		disabled={loading}
-  		className="flex-1 p-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 disabled:bg-gray-400 transition-all flex items-center justify-center gap-2"
+            // (*** កែសម្រួលនៅទីនេះ ***)
+  		    onClick={handleExcelDownload} 
+  		    disabled={loading} // ប្រើ loading state ពី Hook
+  		    className="flex-1 p-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 disabled:bg-gray-400 transition-all flex items-center justify-center gap-2"
   	      >
   		{loading ? 'កំពុងដំណើរការ...' : (
   		  <>
@@ -394,9 +367,10 @@ function ReportDownloader({ expenses }) {
   		)}
   	      </button>
   	      <button
-  		onClick={generatePdf}
-  		disabled={loading}
-  		className="flex-1 p-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 disabled:bg-gray-400 transition-all flex items-center justify-center gap-2"
+            // (*** កែសម្រួលនៅទីនេះ ***)
+  		    onClick={handlePdfDownload}
+  		    disabled={loading} // ប្រើ loading state ពី Hook
+  		    className="flex-1 p-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 disabled:bg-gray-400 transition-all flex items-center justify-center gap-2"
   	      >
   		{loading ? 'កំពុងដំណើរការ...' : (
   		  <>
